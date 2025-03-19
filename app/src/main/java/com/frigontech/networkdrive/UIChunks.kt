@@ -436,6 +436,3 @@ fun NetworkHostCard(deviceName: String, deviceIPv4: String, port: String) {
         }
     }
 }
-
-
-

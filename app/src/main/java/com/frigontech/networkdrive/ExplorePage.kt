@@ -82,12 +82,11 @@ import com.frigontech.networkdrive.ui.theme.ColorManager
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
 import kotlinx.coroutines.delay
+import androidx.core.content.edit
+import java.security.Permissions
 
 //Font Family
 val bahnschriftFamily = FontFamily(Font(R.font.bahnschrift, FontWeight.Normal))
-// Add these variables at the top level
-private var flaskPort by mutableStateOf(-1)
-private var serverErrorMessage by mutableStateOf<String?>(null)
 
 // Keep these at file level
 private val deviceListState = mutableStateOf<List<deviceData>>(emptyList())
@@ -99,15 +98,6 @@ object ServerState {
     val serverAddress = mutableStateOf("")
 }
 
-data class NetworkDevices(
-    val id: Int = 0,
-    val name: String = "Name?",
-    val type: String = "Type?",
-    val ip: String = "000.000.0.0",
-    val mac: String = "00:00:00:00:00:00",
-    val status: String = "Status?"
-)
-
 //get android shared preferences to know if the app has been started first time since install
 fun isFirstTimeLaunch(context: Context): Boolean {
     val sharedPreferences: SharedPreferences = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
@@ -115,17 +105,10 @@ fun isFirstTimeLaunch(context: Context): Boolean {
 
     if (isFirstTime) {
         // Update the flag so the dialog won't show next time
-        sharedPreferences.edit().putBoolean("FirstTimeLaunch", false).apply()
+        sharedPreferences.edit() { putBoolean("FirstTimeLaunch", false) }
     }
 
     return isFirstTime
-}
-
-//Android Network Service Discovery (NSD)
-
-//network scanner; implement real logic later
-class NetworkDeviceDiscovery(private val context: Context) {
-    // Empty implementation for now
 }
 
 //fetch wifi name when the composable if first created
@@ -150,29 +133,12 @@ fun ExplorePage(navSystem: NavController) {
     // Add sidebar state here
     var isSidebarOpen by remember { mutableStateOf(false) }
 
-    fun checkLocationPermission(context: Context): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    fun requestLocationPermission(context: Context) {
-        if (context is Activity) {
-            ActivityCompat.requestPermissions(
-                context,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                1
-            )
-        }
-    }
-
     // Function to update Wi-Fi name
-    fun refreshWifiName() {
-        if (checkLocationPermission(context)) {
+    fun refreshWifiName() {//request code 4 if for the permission ACCESS_FINE_LOCATION
+        if (checkSpecificPermission(context, 4)) {
             wifiName = getCurrentWifiName(context)
         } else {
-            requestLocationPermission(context)
+            requestSpecificPermission(context, 4)
             wifiName = "Permission Required"
         }
     }
@@ -200,13 +166,14 @@ fun ExplorePage(navSystem: NavController) {
             )
         }
 
+        requestPermissions(context)
         refreshWifiName()
         displayName = retrieveTextData(context, "device-name")?: getLocalIpAddress()
     }
 
     // Monitor permission changes
-    LaunchedEffect(checkLocationPermission(context)) {
-        if (checkLocationPermission(context)) {
+    LaunchedEffect(checkSpecificPermission(context, 4)) {
+        if (checkSpecificPermission(context, 4)) {
             refreshWifiName()
         }
     }
@@ -393,7 +360,7 @@ fun ExplorePage(navSystem: NavController) {
                 SidebarMenuItem(icon = Icons.Rounded.Search, title = "Search Hosts") {
                     navSystem.navigate("search-host-page")
                 }
-                SidebarMenuItem(icon = Icons.Rounded.Folder, title="")
+                SidebarMenuItem(icon = Icons.Rounded.Folder, title="Device Storage")
             }
         }
     }

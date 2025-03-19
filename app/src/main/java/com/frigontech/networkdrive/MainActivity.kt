@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
                         composable("network-interface") { NetworkInterfacePage(navSystem) }
                         composable("configure-device-details") { ConfigurePage(navSystem, focusManager) }
                         composable("search-host-page") { SearchHostPage(navSystem, focusManager) }
+                        composable("file-manager") { FileManagerPage(navSystem, focusManager)}
                     }
                 }
             }
