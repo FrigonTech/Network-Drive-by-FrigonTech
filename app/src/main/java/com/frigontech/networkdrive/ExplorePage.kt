@@ -136,6 +136,10 @@ fun ExplorePage(navSystem: NavController) {
         }
     }
 
+    if(showSnackBarMenu.show.value){
+        showSnackBar()
+    }
+
     // Call refreshWifiName when the composable is first displayed
     LaunchedEffect(Unit) {
         if(isFirstTimeLaunch(context)){
@@ -161,6 +165,12 @@ fun ExplorePage(navSystem: NavController) {
 
         requestPermissions(context)
         refreshWifiName()
+        if(!areAllPermissionsGranted(context)){
+            requestPermissions(context)
+        }
+        specifiedPort = retrieveTextData(context, "port").toIntOrNull()?: 8080
+        sMBJ_ID = if(retrieveTextData(context, "SMBJ1").isNotBlank()) retrieveTextData(context, "SMBJ1") else displayName
+        sMBJ_PASS = if(retrieveTextData(context, "SMBJ2").isNotBlank()) retrieveTextData(context, "SMBJ2") else (localIPv4AD + "45ctuiy1b39f3")
         //displayName = retrieveTextData(context, "device-name")?: getLocalIpAddress()
     }
 
@@ -435,7 +445,8 @@ fun ExplorePage(navSystem: NavController) {
                                 stopServer()
                             }else if(!ServerState.serverLive.value && enableButton){
                                 if(displayName.isEmpty()){
-                                    showToast(context, "Please Configure Details from the Navigation Menu/Configure Details.")
+                                    //show snackbar
+                                    snackbarController("Please Configure Host", "Go", 2500, navSystem)
                                 }else{
                                     startServer(context)
                                 }

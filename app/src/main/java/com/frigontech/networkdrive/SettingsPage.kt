@@ -41,6 +41,7 @@ import androidx.navigation.NavController
 import com.frigontech.networkdrive.ui.theme.ColorManager
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
+import kotlinx.coroutines.delay
 
 //get android shared preferences to know if the app has been started first time since install
 fun isAgreementAcknowledged(context: Context): Boolean {
@@ -198,6 +199,8 @@ fun SettingsPage(navSystem: NavController, focusManager: FocusManager) {
                                             val newState = !agreementAcknStatus
                                             agreementAcknStatus = newState
                                             setAgreementAcknowledged(context, newState)
+                                            showToast(context, "Please, configure...Forwarding to Configure Page")
+                                            navSystem.navigate("configure-device-details")
                                         }
                                     )
                                     Spacer(modifier=Modifier.width(5.dp))

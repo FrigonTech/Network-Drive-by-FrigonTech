@@ -3,6 +3,7 @@ package com.frigontech.networkdrive
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -24,6 +25,18 @@ fun checkPermissions(context: Context): MutableList<Int> {
     }
 
     return requestPermissionIndex
+}
+
+fun areAllPermissionsGranted(context: Context): Boolean{
+    var foundAnyUngranted = mutableStateOf(false)
+    for (i in permissions.indices){
+        if(ContextCompat.checkSelfPermission(context, permissions[i]) == PackageManager.PERMISSION_GRANTED){
+            foundAnyUngranted.value = false
+        }else{
+            foundAnyUngranted.value = true
+        }
+    }
+    return foundAnyUngranted.value
 }
 
 fun checkSpecificPermission(context: Context, requestPermissionIndex:Int): Boolean {

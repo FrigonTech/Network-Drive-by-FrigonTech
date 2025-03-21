@@ -18,11 +18,7 @@ import com.frigontech.networkdrive.ui.theme.NetworkDriveExplorerTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //initializing important vars (saved in phome memory)
-        val displayName = retrieveTextData(this, "device-name").takeIf { it.isNotBlank() } ?: localIPv4AD.split('.').last()
-        specifiedPort = retrieveTextData(this, "port").toIntOrNull()?: 8080
-        sMBJ_ID = (retrieveTextData(this, "SMBJ1").takeIf { it.isNotBlank() }?: displayName).toString()
-        sMBJ_PASS = retrieveTextData(this, "SMBJ2").takeIf {it.isNotBlank()} ?: (localIPv4AD + "45ctuiy1b39f3")
+
 
         enableEdgeToEdge()
         setContent {

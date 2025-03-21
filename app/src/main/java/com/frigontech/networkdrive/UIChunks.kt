@@ -61,10 +61,15 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -77,11 +82,29 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 //vars
 object showMenu{
     var menuVisible= mutableStateOf(false)
     var caller= mutableStateOf("")
+    var folderPath: MutableState<String?> = mutableStateOf<String?>("")
+}
+
+//controlling instead of setting all variables individually
+fun snackbarController(message: String, actionLabel:String, dur: Long, navController: NavController?){
+    showSnackBarMenu.message.value = message
+    showSnackBarMenu.actionLabel.value = actionLabel
+    showSnackBarMenu.dur.value = dur
+    showSnackBarMenu.navSystem.value = navController
+}
+//mutable state to make snackbar appear on screen
+object showSnackBarMenu{
+    var show = mutableStateOf(false)
+    var message = mutableStateOf("")
+    var actionLabel = mutableStateOf("")
+    var dur = mutableStateOf<Long>(2000)
+    var navSystem: MutableState<NavController?> = mutableStateOf<NavController?>(null)
 }
 
 @Immutable
@@ -96,7 +119,8 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
     when{
         showMenu.caller.value.contains("NHC")-> {//Network Host Card
             contextActionsList.clear()
-            contextActionsList.add(ContextAction(Icons.Rounded.Adb, "Request Direct Access [WIP]", {showToast(context, "Feature not available yet")})) // Uses a pop-up on the other device // Still experimental!
+            // Uses a pop-up on the other device // Still experimental!
+            contextActionsList.add(ContextAction(Icons.Rounded.Adb, "Request Direct Access [WIP]", {showToast(context, "Feature not available yet")}))
             contextActionsList.add(ContextAction(Icons.Rounded.Password,"Join Using Credentials", {}))
         }
         showMenu.caller.value.contains("NDC")-> {//Network Device Card (devices that are trying to connect or connected to host)
@@ -110,7 +134,15 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
             contextActionsList.add(ContextAction(Icons.Rounded.FolderCopy, "Copy Folder", {}))
             contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Folder", {}))
             contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {}))
-            contextActionsList.add(ContextAction(Icons.Rounded.WifiTethering, "Map To Network", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.WifiTethering, "Map To Network",
+                {//perform a check for if the id and password is configured!
+                    mapFolderToNetwork(
+                        context,
+                        folderPath = showMenu.folderPath.value?:"",
+                        id = retrieveTextData(context, "SMBJ1"),
+                        password = retrieveTextData(context, "SMBJ2")
+                    )
+                }))
         }
         showMenu.caller.value.contains("FileCard")-> {//Files
             contextActionsList.clear()
@@ -129,6 +161,30 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
 // Toast Messages 1 (SHORT)
 fun showToast(context: Context, message: String, toastLength: Int = Toast.LENGTH_SHORT) {
     Toast.makeText(context, message, toastLength).show()
+}
+//SnackBar
+@Composable
+fun showSnackBar(){
+    val snackbarHostState = remember{ SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        coroutineScope.launch{
+            val result = snackbarHostState.showSnackbar(
+                message=showSnackBarMenu.message.value,
+                actionLabel = showSnackBarMenu.actionLabel.value
+            )
+            if(result == SnackbarResult.ActionPerformed){
+                if(showSnackBarMenu.navSystem.value!=null){
+                    showSnackBarMenu.navSystem.value?.navigate("configure-device-details")
+                }
+            }
+            delay(showSnackBarMenu.dur.value)
+            showSnackBarMenu.show.value=false
+            snackbarHostState.currentSnackbarData?.dismiss()
+        }
+    }
+    SnackbarHost(hostState = snackbarHostState)
 }
 //Alert Dialogues
 fun showCustomPrompt(
@@ -487,6 +543,7 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
                             println("Long press detected on $folderName")
                             showMenu.menuVisible.value = true
                             showMenu.caller.value = "${folderName.split('/').lastOrNull()?:folderName}-FolderCard"
+                            showMenu.folderPath.value = folderPath
                         },
                         onTap = {
                             showMenu.menuVisible.value = false
