@@ -4,7 +4,6 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -40,22 +39,33 @@ import android.app.AlertDialog
 import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.health.connect.datatypes.units.Length
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.rounded.Adb
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.FolderCopy
+import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.LibraryAddCheck
 import androidx.compose.material.icons.rounded.Password
 import androidx.compose.material.icons.rounded.RemoveDone
+import androidx.compose.material.icons.rounded.WifiTethering
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -74,22 +84,40 @@ object showMenu{
     var caller= mutableStateOf("")
 }
 
+@Immutable
 data class ContextAction(
     val icon: ImageVector,
     val actionName:String,//name of context action
     val actionClick: () -> Unit = {}//event that'll happen on clicking that context action
 )
 
-fun GetContextActions():List<ContextAction>{//setup actions based on context
+fun GetContextActions(context: Context):List<ContextAction>{//setup actions based on context
     val contextActionsList = mutableListOf<ContextAction>()
-    when(showMenu.caller.value){
-        "NHC"-> {//Network Host Card
-            contextActionsList.add(ContextAction(Icons.Rounded.Adb, "Request Direct Access", {})) // Uses a pop-up on the other device // Still experimental!
+    when{
+        showMenu.caller.value.contains("NHC")-> {//Network Host Card
+            contextActionsList.clear()
+            contextActionsList.add(ContextAction(Icons.Rounded.Adb, "Request Direct Access [WIP]", {showToast(context, "Feature not available yet")})) // Uses a pop-up on the other device // Still experimental!
             contextActionsList.add(ContextAction(Icons.Rounded.Password,"Join Using Credentials", {}))
         }
-        "NDC"-> {//Network Device Card (devices that are trying to connect or connected to host)
+        showMenu.caller.value.contains("NDC")-> {//Network Device Card (devices that are trying to connect or connected to host)
+            contextActionsList.clear()
             contextActionsList.add(ContextAction(Icons.Rounded.LibraryAddCheck, "Allow Join Request", {}))
             contextActionsList.add(ContextAction(Icons.Rounded.RemoveDone, "Dismiss Join Request", {}))
+        }
+        showMenu.caller.value.contains("FolderCard")-> {//Folders
+            contextActionsList.clear()
+            contextActionsList.add(ContextAction(Icons.Rounded.FolderOpen, "Open Folder", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.FolderCopy, "Copy Folder", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Folder", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.WifiTethering, "Map To Network", {}))
+        }
+        showMenu.caller.value.contains("FileCard")-> {//Files
+            contextActionsList.clear()
+            contextActionsList.add(ContextAction(Icons.Rounded.FolderOpen, "Open File", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.FolderCopy, "Copy File", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut File", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {}))
         }
     }
     return contextActionsList
@@ -139,7 +167,7 @@ fun SidebarMenuItem(
             .height(50.dp)
             .clip(RoundedCornerShape(7.dp))
             .background(Color.Transparent)
-            .clickable(onClick = {onClick() ;showMenu.menuVisible.value = false})
+            .clickable(onClick = { onClick();showMenu.menuVisible.value = false })
             .padding(7.dp)
     ) {
         Icon(
@@ -173,8 +201,8 @@ fun TitleBar(title:String, navSystem: NavController){
         )
         .pointerInput(Unit) {
             detectTapGestures(
-                onLongPress = { offset ->
-                    showMenu.menuVisible.value = false
+                onTap = { offset ->
+                    showMenu.menuVisible.value = false;
                 }
             )
         },
@@ -384,8 +412,10 @@ fun NetworkHostCard(deviceName: String, deviceIPv4: String, port: String) {
                 .padding(horizontal = 2.dp, vertical = 2.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(
-                        onLongPress = { showMenu.menuVisible.value = true ; showMenu.caller.value="NHC" },
-                        onTap = {showMenu.menuVisible.value = false}
+                        onLongPress = {
+                            showMenu.menuVisible.value = true; showMenu.caller.value = "NHC"
+                        },
+                        onTap = { showMenu.menuVisible.value = false }
                     )
                 }
         ) {
@@ -433,6 +463,113 @@ fun NetworkHostCard(deviceName: String, deviceIPv4: String, port: String) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(70.dp)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(horizontal = 2.dp, vertical = 2.dp)
+                // Move the pointerInput to directly under the Card
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            // Debug log to verify the long press is detected
+                            println("Long press detected on $folderName")
+                            showMenu.menuVisible.value = true
+                            showMenu.caller.value = "${folderName.split('/').lastOrNull()?:folderName}-FolderCard"
+                        },
+                        onTap = {
+                            showMenu.menuVisible.value = false
+                            println("Tap detected on $folderPath")
+                            onClick()
+                        }
+                    )
+                },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary) // Transparent Card
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxHeight()
+            ) {
+                // Left Column; Folder Icon
+                Box(
+                    modifier = Modifier
+                        .width(50.dp)
+                        .fillMaxHeight()
+                        .padding(start=5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.folder_icon),
+                        contentDescription = "Folder Icon",
+                        modifier = Modifier.size(45.dp),
+                        // Make sure the tint is applied correctly
+                        tint = Color.Unspecified
+                    )
+                }
+
+                //Right Column; Folder Name
+                Row(modifier = Modifier.fillMaxSize().padding(start=5.dp, end=5.dp, top=21.dp)
+                ) {
+                    Text(
+                        text = folderName,
+                        fontSize = 14.sp,
+                        fontFamily = bahnschriftFamily,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@DrawableRes
+fun fileIcon(extension:String): Int{
+    return when(extension){
+        "png"->R.drawable.extension_png//for png
+        else->R.drawable.folder_icon//default fallback
+    }
+}
+
+@Composable //see folders listed in the page in 'list view'
+fun FileCard_ListView(fileName:String){
+    val extension:String= fileName.split('.')[1]
+    Box(modifier=Modifier.fillMaxWidth()){
+        Card(modifier= Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        showMenu.menuVisible.value = true; showMenu.caller.value = "FileCard"
+                    },
+                    onTap = { showMenu.menuVisible.value = false; /* handle accessing the file */ }
+                )
+            }){
+            Image(
+                painter = painterResource(id= fileIcon(extension)),
+                contentDescription = null,
+                modifier=Modifier
+                    .size(40.dp)
+                    .padding(end = 7.dp)
+            )
+            Text(
+                text=fileName,
+                fontFamily = bahnschriftFamily,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

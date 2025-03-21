@@ -9,7 +9,6 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Looper
 import android.widget.Toast
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -31,7 +30,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Folder
@@ -53,17 +51,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -76,14 +71,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.navigation.NavController
 import com.frigontech.networkdrive.ui.theme.ColorManager
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
 import kotlinx.coroutines.delay
-import androidx.core.content.edit
-import java.security.Permissions
 
 //Font Family
 val bahnschriftFamily = FontFamily(Font(R.font.bahnschrift, FontWeight.Normal))
@@ -118,7 +111,7 @@ fun getCurrentWifiName(context: Context): String {
     }
 
     val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-    val wifiInfo: WifiInfo? = wifiManager.connectionInfo
+    @Suppress("DEPRECATION") val wifiInfo: WifiInfo? = wifiManager.connectionInfo
     return wifiInfo?.ssid?.removePrefix("\"")?.removeSuffix("\"") ?: "Unknown SSID"
 }
 
@@ -168,7 +161,7 @@ fun ExplorePage(navSystem: NavController) {
 
         requestPermissions(context)
         refreshWifiName()
-        displayName = retrieveTextData(context, "device-name")?: getLocalIpAddress()
+        //displayName = retrieveTextData(context, "device-name")?: getLocalIpAddress()
     }
 
     // Monitor permission changes
@@ -177,8 +170,6 @@ fun ExplorePage(navSystem: NavController) {
             refreshWifiName()
         }
     }
-
-    val coroutineScope = rememberCoroutineScope()
 
     fun refreshDevices() {
         // Start scanning
@@ -285,11 +276,7 @@ fun ExplorePage(navSystem: NavController) {
             label = "sidebar scale anim"
         )
         // Smooth opacity animation
-        val animatedOpacity by animateFloatAsState(
-            targetValue = if (isOpen) 0.5f else 0f,
-            animationSpec = tween(durationMillis = 370),
-            label = "sidebar opacity anim"
-        )
+        val animatedOpacity = animatedProgress * 0.9f
 
         LaunchedEffect(Unit) {
             delay(370)
@@ -323,6 +310,7 @@ fun ExplorePage(navSystem: NavController) {
                 modifier = Modifier
                     .width(250.dp)
                     .fillMaxHeight()
+                    .clip(RoundedCornerShape(13.dp))
                     .background(MaterialTheme.colorScheme.background)
                     .padding(5.dp)
                     .clickable(enabled = if(firstOpen.value)true else false) { /* Prevent click-through */ }
@@ -360,7 +348,9 @@ fun ExplorePage(navSystem: NavController) {
                 SidebarMenuItem(icon = Icons.Rounded.Search, title = "Search Hosts") {
                     navSystem.navigate("search-host-page")
                 }
-                SidebarMenuItem(icon = Icons.Rounded.Folder, title="Device Storage")
+                SidebarMenuItem(icon = Icons.Rounded.Folder, title="Device Storage") {
+                    navSystem.navigate("file-manager")
+                }
             }
         }
     }
@@ -444,7 +434,12 @@ fun ExplorePage(navSystem: NavController) {
                             if (ServerState.serverLive.value && enableButton) {
                                 stopServer()
                             }else if(!ServerState.serverLive.value && enableButton){
-                                startServer(context, "0.0.0.0")
+                                if(displayName.isEmpty()){
+                                    showToast(context, "Please Configure Details from the Navigation Menu/Configure Details.")
+                                }else{
+                                    startServer(context)
+                                }
+
                             } else {
                                 showToast(context, "Please accept the 'Disclaimer/Warning' statements on the Settings page.", toastLength = Toast.LENGTH_LONG)
                             }
@@ -491,7 +486,7 @@ fun ExplorePage(navSystem: NavController) {
 
                         if (ServerState.serverLive.value) {
                             Text(
-                                text = "Access at: "+"$localIPv4AD"+":"+ (retrieveTextData(context, "port").toIntOrNull()?: 8080),
+                                text = "Access at: "+localIPv4AD+":"+ (retrieveTextData(context, "port").toIntOrNull()?: 8080),
                                 fontSize = 14.sp,
                                 fontFamily = bahnschriftFamily,
                                 color = MaterialTheme.colorScheme.primary

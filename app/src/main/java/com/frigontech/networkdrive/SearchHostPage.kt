@@ -2,6 +2,7 @@ package com.frigontech.networkdrive
 
 import android.R
 import android.os.Looper
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -54,6 +55,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusManager
@@ -442,24 +444,17 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
     //contruct-contextmenu
     @Composable
     fun AnimatedContextMenuContent(isOpen: Boolean, onClose: () -> Unit) {
-        var firstOpen = remember { mutableStateOf(true) }
+        Log.d("ContextMenu", "Menu state: isOpen=$isOpen")
+        // Cache the actions based on the caller context
+        val actions = remember(showMenu.caller.value) { GetContextActions(context) }
+
         // Animation value from 0 to 1
         val animatedProgress by animateFloatAsState(
-            targetValue = if (isOpen) 1f else 0f,
+            targetValue = if (isOpen) 1f else 0f, // Start fully expanded if not initialized
             animationSpec = tween(durationMillis = 370),
             label = "sidebar scale anim"
         )
-        // Smooth opacity animation
-        val animatedOpacity by animateFloatAsState(
-            targetValue = if (isOpen) 0.7f else 0f,
-            animationSpec = tween(durationMillis = 370),
-            label = "sidebar opacity anim"
-        )
-
-        LaunchedEffect(Unit) {
-            delay(370)
-            firstOpen.value=false
-        }
+        val animatedOpacity = animatedProgress * 0.9f
 
         // Background overlay
         if (animatedOpacity > 0f || isOpen) {
@@ -467,36 +462,35 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                 modifier = Modifier
                     .fillMaxSize()
                     .clickable { onClose() }
-                    .drawBehind {
-                        drawRect(
-                            color = Color.Black.copy(alpha = animatedOpacity),
-                            size = this.size
-                        )
-                    }
+                    .alpha(animatedOpacity)
+                    .background(Color.Black.copy(alpha = animatedOpacity))
             )
         }
 
-        Box(modifier = Modifier.fillMaxSize().graphicsLayer {
-            // Set the transformOrigin to ensure scaling happens from the left edge
-            transformOrigin = TransformOrigin(0.5f, 1f) // 0.5f = horizontal center, 1f = bottom
-            scaleY = (animatedProgress)
-        }) {
-            // Sidebar content
+        // Sidebar content properly aligned at the bottom
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(topStart=15.dp, topEnd=15.dp))
+                    .clip(RoundedCornerShape(topStart = 25.dp, topEnd = 25.dp))
                     .fillMaxWidth()
-                    .height(400.dp)
-                    .align(alignment = Alignment.BottomCenter)
+                    .height((animatedProgress * 400).dp) // Animate the height
+                    .align(Alignment.BottomCenter) // Anchor to bottom of the screen
                     .background(MaterialTheme.colorScheme.background)
                     .padding(5.dp)
-                    .clickable(enabled = if(firstOpen.value)true else false) { /* Prevent click-through */ }
+                    .clickable(enabled = false) { /* Prevent click-through */ }
             ) {
                 Spacer(modifier = Modifier.height(5.dp))
-                FrigonTechRow(modifier = Modifier.height(40.dp).fillMaxWidth()
-                    .height(60.dp), horizontal = Arrangement.Center) {
+                FrigonTechRow(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .fillMaxWidth()
+                        .height(60.dp),
+                    horizontal = Arrangement.Center
+                ) {
                     Text(
-                        text = "-Actions-",
+                        text = "-Actions-", // Limit folder name to ensure identification
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = bahnschriftFamily,
@@ -513,8 +507,8 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                 }
                 HorizontalDivider()
                 LazyColumn {
-                    items(count=GetContextActions().size) { index-> /*list of options would be decided based on context(caller in this case)*/
-                        val action = GetContextActions()[index]
+                    items(count = actions.size) { index -> /* List of options based on context */
+                        val action = actions[index]
                         SidebarMenuItem(action.icon, action.actionName, action.actionClick)
                     }
                 }

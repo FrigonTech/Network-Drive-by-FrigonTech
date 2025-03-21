@@ -102,8 +102,6 @@ dependencies {
 
     implementation("io.ktor:ktor-client-core:2.3.6")
     implementation("io.ktor:ktor-client-android:2.3.6") // Android-specific HTTP client
-    //google's Json library
-    //implementation("com.google.code.gson:gson:2.10.1")
     //SMBJ dependency
-    implementation("eu.agno3.jcifs:jcifs-ng:2.1.6")
+    implementation("com.hierynomus:smbj:0.14.0")
 }

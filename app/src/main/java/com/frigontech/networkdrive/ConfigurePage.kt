@@ -1,13 +1,10 @@
 package com.frigontech.networkdrive
 
-import android.content.Context
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
@@ -15,7 +12,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,7 +21,7 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
 var displayName:String = ""
@@ -46,16 +42,16 @@ fun ConfigurePage(navSystem: NavController, focusManger: FocusManager) {
 
     //Things to do when UI first Composed!
     LaunchedEffect(Unit) {
-        deviceName.value = if(displayName!="")displayName else (retrieveTextData(context, "device-name")?: localIPv4AD) //retrieve or initialize the name of the device!
+        deviceName.value = if(displayName!="")displayName else (if(retrieveTextData(context, "device-name").isNotBlank()) retrieveTextData(context, "device-name") else localIPv4AD) //retrieve or initialize the name of the device!
         myPort.intValue = if(specifiedPort!=0)specifiedPort else (retrieveTextData(context, "port").toIntOrNull()?: 8080)
-        myID.value = if(sMBJ_ID!="")sMBJ_ID else (retrieveTextData(context, "SMBJ1")?: deviceName.value)
-        myPASS.value = if(sMBJ_PASS!="")sMBJ_PASS else (retrieveTextData(context, "SMBJ2") ?: (localIPv4AD + "45ctuiy1b39f3"))
+        myID.value = if(sMBJ_ID!="")sMBJ_ID else (if(retrieveTextData(context, "SMBJ1").isNotBlank()) retrieveTextData(context, "SMBJ1") else deviceName.value)
+        myPASS.value = if(sMBJ_PASS!="")sMBJ_PASS else (if(retrieveTextData(context, "SMBJ2").isNotBlank()) retrieveTextData(context, "SMBJ2") else (localIPv4AD + "45ctuiy1b39f3"))
     }
 
     LaunchedEffect(deviceName.value) {
         displayName = deviceName.value
     }
-    LaunchedEffect(myPort.value) {
+    LaunchedEffect(myPort.intValue) {
         specifiedPort = myPort.intValue
     }
     LaunchedEffect(myID.value) {
@@ -79,7 +75,7 @@ fun ConfigurePage(navSystem: NavController, focusManger: FocusManager) {
                         modifier=Modifier.fillMaxWidth(),
                         value = deviceName.value,  // Access the value property here
                         onValueChange = { deviceName.value = it },
-                        label = { Text("Enter a Device Name") }
+                        label = { Text("Enter a Device Name", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
                     )
                 }
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
@@ -100,7 +96,7 @@ fun ConfigurePage(navSystem: NavController, focusManger: FocusManager) {
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        label = { Text("Specify port to host and look for device(s)/host(s)") }
+                        label = { Text("Specify port to host and look for device(s)/host(s)", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
                     )
                 }
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
@@ -112,7 +108,7 @@ fun ConfigurePage(navSystem: NavController, focusManger: FocusManager) {
                         modifier=Modifier.fillMaxWidth(),
                         value = myID.value,  // Access the value property here
                         onValueChange = { myID.value = it },
-                        label = { Text("Enter Authentication ID") }
+                        label = { Text("Enter Authentication ID", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
                     )
                 }
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
@@ -124,7 +120,7 @@ fun ConfigurePage(navSystem: NavController, focusManger: FocusManager) {
                         modifier=Modifier.fillMaxWidth(),
                         value = myPASS.value,  // Access the value property here
                         onValueChange = { myPASS.value = it },
-                        label = { Text("Enter Authentication Password") }
+                        label = { Text("Enter Authentication Password", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
                     )
                 }
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {

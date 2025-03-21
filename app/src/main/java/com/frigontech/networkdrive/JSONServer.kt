@@ -4,20 +4,21 @@ import android.content.Context
 import android.os.Looper
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.jackson.jackson
+import io.ktor.server.application.call
+import io.ktor.server.application.install
+import io.ktor.server.cio.CIO
+import io.ktor.server.engine.ApplicationEngine
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.get
+import io.ktor.server.routing.routing
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import io.ktor.http.*
-import io.ktor.server.engine.*
-import io.ktor.server.cio.*
-import io.ktor.server.application.*  // Correct import for Application
-import io.ktor.server.plugins.contentnegotiation.* // Content Negotiation
-import io.ktor.serialization.jackson.*  // Jackson serialization
-import io.ktor.server.response.*  // For call.respond
-import io.ktor.server.routing.*  // Routing
-import io.ktor.server.engine.*  // For embeddedServer
-import io.ktor.server.cio.*  // CIO Engine
 
 
 //device json class
@@ -53,7 +54,7 @@ fun entryPointJSON(context: Context, deviceName: String, ipv4: String) {
     println("DEBUG: JSON File Content -> ${file.readText()}")
 }
 
-fun startServer(context: Context, host: String) {
+fun startServer(context: Context) {
     var loadPort = retrieveTextData(context, "port").toIntOrNull()?: 8080
     if (server != null) {
         println("Server is already running!")
@@ -61,10 +62,7 @@ fun startServer(context: Context, host: String) {
     }
 
     //val deviceName = android.os.Build.MODEL ?: "Unknown"
-    val localIPv4 = getLocalIpAddress() ?: "127.0.0.1"
-    if(displayName.isEmpty()){
-        displayName=retrieveTextData(context, "device-name")
-    }
+    val localIPv4 = getLocalIpAddress()
 
     entryPointJSON(context, "Admin-$displayName", localIPv4)
 
@@ -177,7 +175,7 @@ fun fetchAndSyncDeviceList(ipv4: String, port: Int, isHosting:Boolean=true, onCo
 }
 
 // Function to compare and sync the device list
-private fun syncDeviceList(newDeviceList: List<deviceData>) {
+/*private fun syncDeviceList(newDeviceList: List<deviceData>) {
     // Remove devices that no longer exist in JSON
     deviceList.removeAll { existingDevice ->
         newDeviceList.none { newDevice -> newDevice.deviceIPv4 == existingDevice.deviceIPv4 }
@@ -195,7 +193,7 @@ private fun syncDeviceList(newDeviceList: List<deviceData>) {
     }
 
     println("Updated device list: $deviceList")
-}
+}*/
 
 // Function to get the current device list
 fun getDevicesList(isHosting:Boolean=true): List<deviceData> {

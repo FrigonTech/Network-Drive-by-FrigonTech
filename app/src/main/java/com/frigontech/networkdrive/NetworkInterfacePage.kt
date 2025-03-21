@@ -1,18 +1,21 @@
+@file:Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+
 package com.frigontech.networkdrive
 
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.frigontech.networkdrive.ui.theme.ColorManager
@@ -24,11 +27,11 @@ import java.util.Collections
 var localIPv4AD: String = getLocalIpAddress()
 
 @Composable
-fun NetworkInterfacePage(navSystem: NavController) {
+fun NetworkInterfacePage(navSystem: NavController, focusManager: FocusManager) {
 
     //Making a Terminal like Vertical Text containing structure
-    Column(modifier = Modifier.fillMaxSize()) {
-        TitleBar(title = "Network Interface", navSystem = navSystem)
+    Column(modifier = Modifier.fillMaxSize().pointerInput(Unit){detectTapGestures {focusManager.clearFocus()}}) {
+        TitleBar(title = "Network Interface", navSystem = navSystem )
         //Code Style Body
         // Terminal-like black box (fills remaining space)
         Box(
