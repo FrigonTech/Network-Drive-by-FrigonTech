@@ -1,17 +1,61 @@
 package com.frigontech.networkdrive
 
 import android.content.Context
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.connection.Connection
 import com.hierynomus.smbj.session.Session
 import com.hierynomus.smbj.share.DiskShare
+import jcifs.CIFSContext
+import jcifs.config.PropertyConfiguration
+import jcifs.context.BaseContext
+import jcifs.smb.NtlmPasswordAuthenticator
+import jcifs.smb.SmbFile
 import java.io.File
+import java.util.Properties
 
-object SMBJSession{
-    var session: MutableState<Session?> =  mutableStateOf<Session?>(null)
+// Object to store active SMB sessions
+object SessionObjects {
+    val sessionRef = mutableStateListOf<CIFSContext>()
+}
+
+fun authenticateAndStoreSession(
+    server: String,
+    username: String,
+    password: String,
+    domain: String = "WORKGROUP"
+): Boolean {
+    return try {
+        // Create properties for SMB context configuration
+        val properties = Properties().apply {
+            setProperty("jcifs.smb.client.domain", domain)
+            setProperty("jcifs.smb.client.username", username)
+            setProperty("jcifs.smb.client.password", password)
+        }
+
+        val config = PropertyConfiguration(properties)
+        val context: CIFSContext = BaseContext(config).withCredentials(
+            NtlmPasswordAuthenticator(domain, username, password)
+        )
+
+        // Validate the session by attempting to access a shared resource
+        val smbUrl = "smb://$server/" // Change to the appropriate resource URL
+        val smbFile = SmbFile(smbUrl, context)
+        if (smbFile.exists()) {
+            // Store the session in the shared object
+            SessionObjects.sessionRef.add(context)
+            println("Authentication successful and session stored.")
+            true // Authentication successful
+        } else {
+            println("Failed to connect to the specified resource.")
+            false // Resource not found
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        println("Authentication failed due to an error: ${e.message}")
+        false // Authentication failed
+    }
 }
 
 fun mapFolderToNetwork(context: Context, folderPath:String, id:String, password:String, domain:String? = null): DiskShare?{

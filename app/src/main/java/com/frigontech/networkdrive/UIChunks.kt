@@ -59,11 +59,13 @@ import androidx.compose.material.icons.rounded.RemoveDone
 import androidx.compose.material.icons.rounded.WifiTethering
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -72,15 +74,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.node.Ref
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -89,6 +94,8 @@ object showMenu{
     var menuVisible= mutableStateOf(false)
     var caller= mutableStateOf("")
     var folderPath: MutableState<String?> = mutableStateOf<String?>("")
+    var currentServer = mutableStateOf("")
+    var showInputDialogue = mutableStateOf(false)
 }
 
 //controlling instead of setting all variables individually
@@ -121,7 +128,9 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
             contextActionsList.clear()
             // Uses a pop-up on the other device // Still experimental!
             contextActionsList.add(ContextAction(Icons.Rounded.Adb, "Request Direct Access [WIP]", {showToast(context, "Feature not available yet")}))
-            contextActionsList.add(ContextAction(Icons.Rounded.Password,"Join Using Credentials", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.Password,"Join Using Credentials", {
+                showMenu.showInputDialogue.value = true
+            }))
         }
         showMenu.caller.value.contains("NDC")-> {//Network Device Card (devices that are trying to connect or connected to host)
             contextActionsList.clear()
@@ -456,7 +465,7 @@ fun NetworkDeviceCard(deviceName: String, deviceIPv4: String) {
 }
 
 @Composable
-fun NetworkHostCard(deviceName: String, deviceIPv4: String, port: String) {
+fun NetworkHostCard(deviceName: String, deviceIPv4: String, port: String, SMB: Boolean = false) {
 
     Box(
         modifier = Modifier
@@ -470,6 +479,7 @@ fun NetworkHostCard(deviceName: String, deviceIPv4: String, port: String) {
                     detectTapGestures(
                         onLongPress = {
                             showMenu.menuVisible.value = true; showMenu.caller.value = "NHC"
+                            showMenu.currentServer.value = deviceIPv4
                         },
                         onTap = { showMenu.menuVisible.value = false }
                     )
@@ -542,7 +552,8 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
                             // Debug log to verify the long press is detected
                             println("Long press detected on $folderName")
                             showMenu.menuVisible.value = true
-                            showMenu.caller.value = "${folderName.split('/').lastOrNull()?:folderName}-FolderCard"
+                            showMenu.caller.value =
+                                "${folderName.split('/').lastOrNull() ?: folderName}-FolderCard"
                             showMenu.folderPath.value = folderPath
                         },
                         onTap = {
@@ -563,7 +574,7 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
                     modifier = Modifier
                         .width(50.dp)
                         .fillMaxHeight()
-                        .padding(start=5.dp),
+                        .padding(start = 5.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -576,7 +587,9 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
                 }
 
                 //Right Column; Folder Name
-                Row(modifier = Modifier.fillMaxSize().padding(start=5.dp, end=5.dp, top=21.dp)
+                Row(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 5.dp, end = 5.dp, top = 21.dp)
                 ) {
                     Text(
                         text = folderName,

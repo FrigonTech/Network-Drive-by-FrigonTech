@@ -66,9 +66,19 @@ android {
             excludes.add("META-INF/NOTICE.txt")
             excludes.add("META-INF/notice.txt")
             excludes.add("META-INF/*.kotlin_module")
+            excludes.add("org/bouncycastle/x509/CertPathReviewerMessages_de.properties")
+            excludes.add("org/bouncycastle/x509/CertPathReviewerMessages.properties")
         }
     }
 }
+
+configurations.all {
+    resolutionStrategy {
+        force("org.bouncycastle:bcprov-jdk18on:1.79")
+        exclude(group = "org.bouncycastle", module = "bcprov-jdk15on")
+    }
+}
+
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -100,8 +110,15 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0") // Latest Jackson module
     implementation("io.ktor:ktor-server-content-negotiation:2.3.6")// COntent Negotiator
 
+    implementation("org.bouncycastle:bcprov-jdk18on:1.79")
+
+
     implementation("io.ktor:ktor-client-core:2.3.6")
     implementation("io.ktor:ktor-client-android:2.3.6") // Android-specific HTTP client
     //SMBJ dependency
     implementation("com.hierynomus:smbj:0.14.0")
+    //JCIFS
+    implementation("eu.agno3.jcifs:jcifs-ng:2.1.9")
+    //EasySMBServer module
+    //implementation(project(":EasySMBServer"))
 }

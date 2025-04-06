@@ -13,12 +13,14 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,7 +37,9 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.WifiFind
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -44,6 +48,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -67,12 +72,20 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
+import com.frigontech.networkdrive.ui.theme.ColorManager
+import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
+import com.hierynomus.smbj.SMBClient
+import com.hierynomus.smbj.auth.AuthenticationContext
+import com.hierynomus.smbj.connection.Connection
+import com.hierynomus.smbj.utils.SmbFiles
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode
@@ -87,7 +100,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
+import java.net.InetAddress
 import java.net.URL
+import jcifs.netbios.NbtAddress
+import java.net.UnknownHostException
 
 private var scanJob: Job? = null
 
@@ -98,6 +114,10 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
     var hostSearchResult: MutableState<String> = remember{ mutableStateOf("No host(s) found on port: ${loadPort}")}
     var searchProgress = remember{ mutableFloatStateOf(0f) }
     var isAutoScanRunning = remember {mutableStateOf(false)}
+    val followSMBProtocol = retrieveTextData(context, "SMB").let { text ->
+        if (text.isNullOrBlank()) false else (text == "true")
+        //^^^^^^^^^^^ this is a way to directly pass bool value
+    }
 
     Column(modifier=Modifier
         .fillMaxSize()
@@ -195,46 +215,74 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                     // Run all checks in parallel using async
                     val jobs: List<Deferred<Unit>> = hostBatch.map { host ->
                         async {
-                            val hostAddress = "http://$host:$loadPort/data.json"
-                            if(!isAutoScanRunning.value){
-                                this@async.cancel("Auto Scan Stopped")//cancel the async
-                                return@async
-                                searchProgress.floatValue=0f
-                            }
-                            else{
-                                if (checkUrl(hostAddress) && isAutoScanRunning.value) {
-                                    println("$hostAddress is available")
+                            if(!followSMBProtocol){
+                                val hostAddress = "http://$host:$loadPort/data.json"
+                                if(!isAutoScanRunning.value){
+                                    this@async.cancel("Auto Scan Stopped")//cancel the async
+                                    return@async
+                                    searchProgress.floatValue=0f
+                                }
+                                else{
+                                    if (checkUrl(hostAddress) && isAutoScanRunning.value) {
+                                        println("$hostAddress is available")
 
-                                    // Fetch & sync devices
-                                    fetchAndSyncDeviceList(host, loadPort, isHosting = false) { success ->
-                                        if (success && isAutoScanRunning.value) {
-                                            val currentList = getDevicesList(isHosting = false)
+                                        // Fetch & sync devices
+                                        fetchAndSyncDeviceList(host, loadPort, isHosting = false) { success ->
+                                            if (success && isAutoScanRunning.value) {
+                                                val currentList = getDevicesList(isHosting = false)
 
-                                            // UI update only if no hosts found
-                                            if (currentList.isEmpty()) {
-                                                android.os.Handler(Looper.getMainLooper()).post {
-                                                    Toast.makeText(
-                                                        context,
-                                                        "No such hosts found on LAN",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                // UI update only if no hosts found
+                                                if (currentList.isEmpty()) {
+                                                    android.os.Handler(Looper.getMainLooper()).post {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "No such hosts found on LAN",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                } else {
+                                                    currentList.filter { it.deviceName.contains("Admin-") }
+                                                        .forEach { foundDeviceHostDetails.add(it) }
                                                 }
-                                            } else {
-                                                currentList.filter { it.deviceName.contains("Admin-") }
-                                                    .forEach { foundDeviceHostDetails.add(it) }
                                             }
                                         }
+                                        hostSearchResult.value="Host(s) detected"
+                                    } else {
+                                        println("$hostAddress is unreachable")
+                                        hostSearchResult.value="No host(s) detected"
                                     }
-                                    hostSearchResult.value="Host(s) detected"
-                                } else {
-                                    println("$hostAddress is unreachable")
-                                    hostSearchResult.value="No host(s) detected"
+                                    // **Update Progress**
+                                    checkedHosts++
+                                    searchProgress.floatValue = if(isAutoScanRunning.value) (checkedHosts / (totalHosts)) else 0f
+                                }
+                            }else{
+                                if(!isAutoScanRunning.value){
+                                    this@async.cancel("Auto Scan Stopped")//cancel the async
+                                    return@async
+                                    searchProgress.floatValue=0f
+                                }else{
+                                    val smbURL = "\\\\${host}"
+                                    val client = SMBClient()
+                                    try{
+                                        val connection: Connection = client.connect(host)
+                                        if(connection.isConnected){
+                                            val currentList = getDevicesList(isHosting = false)
+                                            foundDeviceHostDetails.add(deviceData(deviceName = host, deviceIPv4 = host, SMB = true))
+                                        }else{
+                                            println("failure in connection: $smbURL")
+                                        }
+                                    }catch(e: Exception){
+                                        println("Exception; ${e.message}")
+                                    }
+                                    finally {
+                                        client.close()
+                                    }
                                 }
                                 // **Update Progress**
                                 checkedHosts++
                                 searchProgress.floatValue = if(isAutoScanRunning.value) (checkedHosts / (totalHosts)) else 0f
-                            }
 
+                            }
                         }
                     }
                     // Wait for all network checks to complete
@@ -520,5 +568,81 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
         isOpen = showMenu.menuVisible.value,
         onClose = { showMenu.menuVisible.value = false }
     )
+    @Composable
+    fun AnimatedSMBAuth(isOpen: Boolean, onClose: () -> Unit) {
+        val animatedProgress by animateFloatAsState(
+            targetValue = if (isOpen) 1f else 0f,
+            animationSpec = tween(durationMillis = 370),
+            label = "sidebar scale anim"
+        )
+        LaunchedEffect(Unit) {
+            delay(800)
+        }
+        val username = remember{mutableStateOf("")}
+        val password = remember{mutableStateOf("")}
+        val authSuccessful = remember{mutableStateOf(false)}
 
+        if (isOpen || animatedProgress > 0f) { // Ensures animation completes before disappearing
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = animatedProgress * 0.5f)) // Fade effect
+                    .clickable {focusManager.clearFocus()} // do nothing
+            ) {
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(topStart = 25.dp, topEnd = 25.dp))
+                        .fillMaxWidth()
+                        .height((animatedProgress * 400).dp) // Animate the height
+                        .align(Alignment.BottomCenter)
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(16.dp)
+                        .clickable(enabled = false) {} // Prevent click-through
+                ) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Username", fontSize = 16.sp)
+                    TextField(value = username.value, onValueChange = {newValue->username.value=newValue}, modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Password", fontSize = 16.sp)
+                    TextField(
+                        value = password.value, onValueChange = {newValue->password.value=newValue},
+                        //visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = false, onCheckedChange = {})
+                        Text("Remember Creds")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = onClose, // Call onClose instead of modifying state directly
+                            colors = ButtonDefaults.buttonColors(containerColor = ColorManager(frigontech0warningred))
+                        ) {
+                            Text("Cancel", color = Color.White)
+                        }
+                        Button(
+                            onClick = {authSuccessful.value=authenticateAndStoreSession(
+                                server="${showMenu.currentServer.value}",
+                                username=username.value,
+                                password=password.value
+                            )},//handle authorization
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                        ) {
+                            Text("Go", color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Render the sidebar overlay and content
+    AnimatedSMBAuth(
+        isOpen = showMenu.showInputDialogue.value,
+        onClose = { showMenu.showInputDialogue.value = false }
+    )
 }

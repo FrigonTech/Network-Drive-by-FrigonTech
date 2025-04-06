@@ -62,9 +62,16 @@ fun SettingsPage(navSystem: NavController, focusManager: FocusManager) {
 
     val context = LocalContext.current
     var agreementAcknStatus by remember { mutableStateOf(isAgreementAcknowledged(context)) }
+    val followSMBProtocol = remember{mutableStateOf(false)}
+
+
 
     LaunchedEffect(Unit) {
         agreementAcknStatus =isAgreementAcknowledged(context)
+        followSMBProtocol.value = retrieveTextData(context, "SMB").let { text ->
+            if (text.isNullOrBlank()) false else (text == "true")
+                                                  //^^^^^^^^^^^ this is a way to directly pass bool value
+        }
     }
 
     Box(modifier = Modifier
@@ -211,6 +218,27 @@ fun SettingsPage(navSystem: NavController, focusManager: FocusManager) {
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                 }
+                            }
+                        }
+                        FrigonTechBox {
+                            FrigonTechRow {
+                                Checkbox(
+                                    checked = followSMBProtocol.value,
+                                    enabled = !followSMBProtocol.value,
+                                    onCheckedChange = {
+                                        val newState = !followSMBProtocol.value
+                                        followSMBProtocol.value = newState
+                                        saveTextData(context, "SMB", "${followSMBProtocol.value}")
+                                        showToast(context, "Resolving device names with NetBIOS enabled.")
+                                    }
+                                )
+                                Spacer(modifier=Modifier.width(5.dp))
+                                Text(
+                                    text = "Search SMB Servers Directly (applies to Windows PCs)",
+                                    fontSize = 14.sp,
+                                    fontFamily = bahnschriftFamily,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                         //Add more components here

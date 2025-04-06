@@ -24,7 +24,8 @@ import java.net.URL
 //device json class
 data class deviceData(
     val deviceName: String,
-    val deviceIPv4: String
+    val deviceIPv4: String,
+    val SMB: Boolean = false
 )
 
 //==================================================================================================Starting the server

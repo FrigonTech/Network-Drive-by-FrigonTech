@@ -48,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,6 +77,8 @@ import androidx.navigation.NavController
 import com.frigontech.networkdrive.ui.theme.ColorManager
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
+import jcifs.CIFSContext
+import jcifs.smb.SmbFile
 import kotlinx.coroutines.delay
 
 //Font Family
@@ -360,6 +363,34 @@ fun ExplorePage(navSystem: NavController) {
                 }
                 SidebarMenuItem(icon = Icons.Rounded.Folder, title="Device Storage") {
                     navSystem.navigate("file-manager")
+                }
+                Column(modifier=Modifier.fillMaxWidth()){
+                    LazyColumn {
+                        items(count= SessionObjects.sessionRef.size){index->
+                            fun getSmbServerName(context: CIFSContext): String? {
+                                return try {
+                                    val smbFile = SmbFile("smb://", context)
+                                    smbFile.server // This gives you the server name or IP address
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    null // Return null if there's an error
+                                }
+                            }
+                            FrigonTechRow {
+                                Icon(
+                                    imageVector = Icons.Rounded.Devices,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = getSmbServerName(SessionObjects.sessionRef[index]).toString().takeLast(10),
+                                    fontFamily = bahnschriftFamily,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
