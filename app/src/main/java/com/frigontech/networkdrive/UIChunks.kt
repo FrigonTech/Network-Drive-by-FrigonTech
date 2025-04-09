@@ -96,6 +96,8 @@ object showMenu{
     var folderPath: MutableState<String?> = mutableStateOf<String?>("")
     var currentServer = mutableStateOf("")
     var showInputDialogue = mutableStateOf(false)
+    var replaceSingle = mutableStateOf(false)
+    var replaceAll = mutableStateOf(false)
 }
 
 //controlling instead of setting all variables individually
@@ -145,11 +147,8 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
             contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {}))
             contextActionsList.add(ContextAction(Icons.Rounded.WifiTethering, "Map To Network",
                 {//perform a check for if the id and password is configured!
-                    mapFolderToNetwork(
-                        context,
-                        folderPath = showMenu.folderPath.value?:"",
-                        id = retrieveTextData(context, "SMBJ1"),
-                        password = retrieveTextData(context, "SMBJ2")
+                    mapFileObjectToLFTUCServer(
+                        fileObjectList = listOf(showMenu.folderPath.value?:"")
                     )
                 }))
         }

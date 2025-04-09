@@ -77,15 +77,15 @@ import androidx.navigation.NavController
 import com.frigontech.networkdrive.ui.theme.ColorManager
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
-import jcifs.CIFSContext
-import jcifs.smb.SmbFile
 import kotlinx.coroutines.delay
+import com.frigontech.lftuc_1.lftuc_main_lib.*
+
 
 //Font Family
 val bahnschriftFamily = FontFamily(Font(R.font.bahnschrift, FontWeight.Normal))
 
 // Keep these at file level
-private val deviceListState = mutableStateOf<List<deviceData>>(emptyList())
+private val deviceListState = mutableStateOf<List<LFTUCServers>>(emptyList())
 private val isScanningState = mutableStateOf(false)
 
 // Server state object to track server status
@@ -120,7 +120,7 @@ fun getCurrentWifiName(context: Context): String {
 
 @Composable
 fun ExplorePage(navSystem: NavController) {
-    val navigatoryName = "Browse Local Network"
+    val navigatoryName = "LFTUC Server"
     val context = LocalContext.current
 
     // Change to a mutable state for WiFi name
@@ -172,106 +172,15 @@ fun ExplorePage(navSystem: NavController) {
             requestPermissions(context)
         }
         specifiedPort = retrieveTextData(context, "port").toIntOrNull()?: 8080
-        sMBJ_ID = if(retrieveTextData(context, "SMBJ1").isNotBlank()) retrieveTextData(context, "SMBJ1") else displayName
-        sMBJ_PASS = if(retrieveTextData(context, "SMBJ2").isNotBlank()) retrieveTextData(context, "SMBJ2") else (localIPv4AD + "45ctuiy1b39f3")
-        //displayName = retrieveTextData(context, "device-name")?: getLocalIpAddress()
+        sMBJ_ID = if(!retrieveTextData(context, "SMBJ1").isNullOrBlank()) retrieveTextData(context, "SMBJ1") else displayName
+        sMBJ_PASS = if(!retrieveTextData(context, "SMBJ2").isNullOrBlank()) retrieveTextData(context, "SMBJ2") else (localIPv4AD + "45ctuiy1b39f3")
+        displayName = if(!retrieveTextData(context, "device-name").isNullOrBlank()) retrieveTextData(context, "device-name") else lftuc_getLocalIpv4Address().toString()
     }
 
     // Monitor permission changes
     LaunchedEffect(checkSpecificPermission(context, 4)) {
         if (checkSpecificPermission(context, 4)) {
             refreshWifiName()
-        }
-    }
-
-    fun refreshDevices() {
-        // Start scanning
-        isScanningState.value = true
-
-        // Clear the current list if needed (optional)
-        // deviceList.clear()
-
-        // Fetch and update the list with callback
-        fetchAndSyncDeviceList(localIPv4AD, 8080) { success ->
-            // When fetch completes, update the UI state
-            val currentList = getDevicesList() // This gets the updated list
-            deviceListState.value = currentList // Update the state to trigger recomposition
-
-            // End scanning
-            isScanningState.value = false
-
-            // Optional: Show a toast if no devices found
-            if (currentList.isEmpty()) {
-                android.os.Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(
-                        context,
-                        "No devices found on the network",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
-    }
-
-    @Composable
-    fun NetworkDevicesScreen() {
-        // Get the current values from the state
-        val currentDeviceList by remember { deviceListState }
-        val isScanning by remember { isScanningState }
-
-        // First-time loading effect
-        LaunchedEffect(Unit) {
-            if (currentDeviceList.isEmpty() && !isScanning) {
-                refreshDevices()
-            }
-        }
-
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 2.dp)
-            .padding(bottom = 25.dp)) {
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (isScanning) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            if (currentDeviceList.isEmpty() && !isScanning) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No devices found on the network",
-                        color = Color.Gray
-                    )
-                }
-            }
-
-            // Scrollable list of devices
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-            ) {
-                if(ServerState.serverLive.value){
-                    items(currentDeviceList.size) { index ->
-                        NetworkDeviceCard(
-                            deviceName = currentDeviceList[index].deviceName,
-                            deviceIPv4 = currentDeviceList[index].deviceIPv4
-                        )
-                    }
-                }
-
-            }
         }
     }
 
@@ -366,16 +275,7 @@ fun ExplorePage(navSystem: NavController) {
                 }
                 Column(modifier=Modifier.fillMaxWidth()){
                     LazyColumn {
-                        items(count= SessionObjects.sessionRef.size){index->
-                            fun getSmbServerName(context: CIFSContext): String? {
-                                return try {
-                                    val smbFile = SmbFile("smb://", context)
-                                    smbFile.server // This gives you the server name or IP address
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    null // Return null if there's an error
-                                }
-                            }
+                        items(count= lftuc_currentServers.size){ index->
                             FrigonTechRow {
                                 Icon(
                                     imageVector = Icons.Rounded.Devices,
@@ -383,7 +283,7 @@ fun ExplorePage(navSystem: NavController) {
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
-                                    text = getSmbServerName(SessionObjects.sessionRef[index]).toString().takeLast(10),
+                                    text = lftuc_currentServers.get(index).ServerName.takeLast(10),
                                     fontFamily = bahnschriftFamily,
                                     fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.primary
@@ -443,17 +343,6 @@ fun ExplorePage(navSystem: NavController) {
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                // WiFi network info
-                Text(
-                    text = buildAnnotatedString {
-                        append("⚪ Devices on local network: ")
-                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.tertiary)) {
-                            append(wifiName)
-                        }
-                    },
-                    fontSize = 14.sp
-                )
-
                 // Add Start Service button
                 Row(
                     modifier = Modifier
@@ -479,7 +368,7 @@ fun ExplorePage(navSystem: NavController) {
                                     //show snackbar
                                     snackbarController("Please Configure Host", "Go", 2500, navSystem)
                                 }else{
-                                    startServer(context)
+                                    startServer(context, displayName)
                                 }
 
                             } else {
@@ -536,31 +425,6 @@ fun ExplorePage(navSystem: NavController) {
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(3.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Network Devices",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = bahnschriftFamily
-                    )
-
-                    Button(
-                        onClick = {refreshDevices(); refreshWifiName()},
-                        enabled = !isScanningState.value
-                    ) {
-                        Text(if (isScanningState.value) "Discovering..." else "Refresh")
-                    }
-                }
-
-                // Network devices screen
-                NetworkDevicesScreen()
             }
         }
 

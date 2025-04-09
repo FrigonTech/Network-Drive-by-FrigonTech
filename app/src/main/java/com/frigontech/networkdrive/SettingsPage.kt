@@ -62,15 +62,15 @@ fun SettingsPage(navSystem: NavController, focusManager: FocusManager) {
 
     val context = LocalContext.current
     var agreementAcknStatus by remember { mutableStateOf(isAgreementAcknowledged(context)) }
-    val followSMBProtocol = remember{mutableStateOf(false)}
+    val provideRootAccessOrNot = remember{mutableStateOf(false)}
 
 
 
     LaunchedEffect(Unit) {
         agreementAcknStatus =isAgreementAcknowledged(context)
-        followSMBProtocol.value = retrieveTextData(context, "SMB").let { text ->
+        provideRootAccessOrNot.value = retrieveTextData(context, "rootAccess").let { text ->
             if (text.isNullOrBlank()) false else (text == "true")
-                                                  //^^^^^^^^^^^ this is a way to directly pass bool value
+            //^^^^^^^^^^^ this is a way to directly pass bool value
         }
     }
 
@@ -223,18 +223,18 @@ fun SettingsPage(navSystem: NavController, focusManager: FocusManager) {
                         FrigonTechBox {
                             FrigonTechRow {
                                 Checkbox(
-                                    checked = followSMBProtocol.value,
-                                    enabled = !followSMBProtocol.value,
+                                    checked = provideRootAccessOrNot.value,
+                                    enabled = !provideRootAccessOrNot.value,
                                     onCheckedChange = {
-                                        val newState = !followSMBProtocol.value
-                                        followSMBProtocol.value = newState
-                                        saveTextData(context, "SMB", "${followSMBProtocol.value}")
-                                        showToast(context, "Resolving device names with NetBIOS enabled.")
+                                        val newState = !provideRootAccessOrNot.value
+                                        provideRootAccessOrNot.value = newState
+                                        saveTextData(context, "rootAccess", "${provideRootAccessOrNot.value}")
+                                        showToast(context, "Root Dir Acces will be provided to clients")
                                     }
                                 )
                                 Spacer(modifier=Modifier.width(5.dp))
                                 Text(
-                                    text = "Search SMB Servers Directly (applies to Windows PCs)",
+                                    text = "Provide full device storage access to clients.",
                                     fontSize = 14.sp,
                                     fontFamily = bahnschriftFamily,
                                     color = MaterialTheme.colorScheme.primary

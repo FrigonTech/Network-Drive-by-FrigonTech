@@ -58,6 +58,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -104,8 +105,8 @@ import java.net.InetAddress
 import java.net.URL
 import jcifs.netbios.NbtAddress
 import java.net.UnknownHostException
+import com.frigontech.lftuc_1.lftuc_main_lib.*
 
-private var scanJob: Job? = null
 
 @Composable
 fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
@@ -113,191 +114,33 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
     var loadPort = retrieveTextData(context, "port").toIntOrNull()?: 8080
     var hostSearchResult: MutableState<String> = remember{ mutableStateOf("No host(s) found on port: ${loadPort}")}
     var searchProgress = remember{ mutableFloatStateOf(0f) }
-    var isAutoScanRunning = remember {mutableStateOf(false)}
+    var isScanRunning = remember {mutableStateOf(false)}
     val followSMBProtocol = retrieveTextData(context, "SMB").let { text ->
         if (text.isNullOrBlank()) false else (text == "true")
-        //^^^^^^^^^^^ this is a way to directly pass bool value
+        //------------------------------------//^^^^^^^^^^^ this is a way to directly pass bool value
+    }
+    val foundLFTUCServers = remember{mutableListOf<LFTUCServers>()}
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { isScanRunning.value }
+            .collect { isRunning ->
+                if (isRunning) {
+                    while (isScanRunning.value) {
+                        val newServers =
+                            lftuc_currentServers.filterNot { foundLFTUCServers.contains(it) }
+                        foundLFTUCServers.addAll(newServers)
+                        searchProgress.floatValue += 1 / 29
+                        delay(2000)
+                    }
+                }
+            }
     }
 
     Column(modifier=Modifier
         .fillMaxSize()
         .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } }) {
-        var hostIdentifierList: MutableList<Int> = remember {mutableStateListOf(0,0)}
-        var checked = remember{mutableStateOf(false)}
-        var scanMessage = remember{mutableStateOf("")}
-        scanMessage.value = if(checked.value) "Scan Range" else "Check Avail."
-        var hostsToCheck = remember{mutableStateListOf<String>()}
-        var foundDeviceHostDetails = remember{mutableStateListOf<deviceData>()}
-        fun subnetString(): String{
-            val subnet = localIPv4AD.split('.').take(3).joinToString(".") + "."
-            return subnet
-        }
-        fun subnetHostIdentifierString(): Int{
-            val identifier = localIPv4AD.split('.')[3].toInt()
-            return identifier
-        }
-        var displayIPBeingSearched = remember{mutableStateOf("")}
+        var scanMessage = "Scan for LFTUC Servers"
 
-        fun checkUrl(url: String): Boolean {
-            return try {
-                println("Checking URL: $url")  // Debug log
-                val connection = URL(url).openConnection() as HttpURLConnection
-                connection.connectTimeout = 5000
-                connection.readTimeout = 5000
-                connection.requestMethod = "GET"
-
-                val responseCode = connection.responseCode
-                println("Response Code for $url: $responseCode")
-
-                responseCode == 200
-            } catch (e: Exception) {
-                println("Error checking URL $url: ${e.message}")
-                false
-            }
-        }
-
-        fun makeSubnetsFromRangeAndCheckAvailability(autoScan: Boolean=false){
-            showToast(context, "Scan Started!")
-            if(scanJob?.isActive == true){println("cancelling job..."); scanJob?.cancel(); foundDeviceHostDetails.clear()}
-            foundDeviceHostDetails.clear()
-            hostSearchResult.value = "Searching!"
-
-            if(checked.value){
-                val hostIdentifier_a: Int = hostIdentifierList[0]
-                val hostIdentifier_b: Int = hostIdentifierList[1]
-                displayIPBeingSearched.value = "${subnetString()}$hostIdentifier_a-$hostIdentifier_b"
-                hostsToCheck.clear()
-                for (i in hostIdentifier_a..hostIdentifier_b){
-                    hostsToCheck.add(subnetString() + i.toString())
-                }
-            }else if(autoScan){
-                hostIdentifierList[0]=1
-                hostIdentifierList[1]=254
-                val hostIdentifier_a: Int = hostIdentifierList[0]
-                val hostIdentifier_b: Int = hostIdentifierList[1]
-                displayIPBeingSearched.value = "${subnetString()}$hostIdentifier_a-$hostIdentifier_b"
-                hostsToCheck.clear()
-                for (i in hostIdentifier_a..hostIdentifier_b){
-                    hostsToCheck.add(subnetString() + i.toString())
-                }
-            }else{
-                // Single host case
-                hostsToCheck.clear()
-                val hostId: Int = hostIdentifierList[0]
-                displayIPBeingSearched.value = "${subnetString()}$hostId"
-                val singleHostIP = subnetString() + hostId.toString()
-                hostsToCheck.add(singleHostIP)
-                println("Checking single host: $singleHostIP on port $loadPort")
-            }
-
-            scanJob = CoroutineScope(Dispatchers.IO).launch {
-                val totalHosts = hostsToCheck.size.toFloat()
-                var checkedHosts = 0.0f
-
-                // Internet connectivity test remains the same...
-
-                // Process hosts in batches of 20-30 instead of all at once
-                var batchSize = 25
-
-                /*try {
-                    val url = URL("http://example.com")
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.connectTimeout = 5000
-                    connection.readTimeout = 5000
-                    connection.requestMethod = "GET"
-                    val responseCode = connection.responseCode
-                    println("Internet Test Response Code: $responseCode")
-                } catch (e: Exception) {
-                    println("Internet Test Error: ${e.message}")
-                }*/
-
-                hostsToCheck.chunked(batchSize).forEach {hostBatch->
-                    // Run all checks in parallel using async
-                    val jobs: List<Deferred<Unit>> = hostBatch.map { host ->
-                        async {
-                            if(!followSMBProtocol){
-                                val hostAddress = "http://$host:$loadPort/data.json"
-                                if(!isAutoScanRunning.value){
-                                    this@async.cancel("Auto Scan Stopped")//cancel the async
-                                    return@async
-                                    searchProgress.floatValue=0f
-                                }
-                                else{
-                                    if (checkUrl(hostAddress) && isAutoScanRunning.value) {
-                                        println("$hostAddress is available")
-
-                                        // Fetch & sync devices
-                                        fetchAndSyncDeviceList(host, loadPort, isHosting = false) { success ->
-                                            if (success && isAutoScanRunning.value) {
-                                                val currentList = getDevicesList(isHosting = false)
-
-                                                // UI update only if no hosts found
-                                                if (currentList.isEmpty()) {
-                                                    android.os.Handler(Looper.getMainLooper()).post {
-                                                        Toast.makeText(
-                                                            context,
-                                                            "No such hosts found on LAN",
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                    }
-                                                } else {
-                                                    currentList.filter { it.deviceName.contains("Admin-") }
-                                                        .forEach { foundDeviceHostDetails.add(it) }
-                                                }
-                                            }
-                                        }
-                                        hostSearchResult.value="Host(s) detected"
-                                    } else {
-                                        println("$hostAddress is unreachable")
-                                        hostSearchResult.value="No host(s) detected"
-                                    }
-                                    // **Update Progress**
-                                    checkedHosts++
-                                    searchProgress.floatValue = if(isAutoScanRunning.value) (checkedHosts / (totalHosts)) else 0f
-                                }
-                            }else{
-                                if(!isAutoScanRunning.value){
-                                    this@async.cancel("Auto Scan Stopped")//cancel the async
-                                    return@async
-                                    searchProgress.floatValue=0f
-                                }else{
-                                    val smbURL = "\\\\${host}"
-                                    val client = SMBClient()
-                                    try{
-                                        val connection: Connection = client.connect(host)
-                                        if(connection.isConnected){
-                                            val currentList = getDevicesList(isHosting = false)
-                                            foundDeviceHostDetails.add(deviceData(deviceName = host, deviceIPv4 = host, SMB = true))
-                                        }else{
-                                            println("failure in connection: $smbURL")
-                                        }
-                                    }catch(e: Exception){
-                                        println("Exception; ${e.message}")
-                                    }
-                                    finally {
-                                        client.close()
-                                    }
-                                }
-                                // **Update Progress**
-                                checkedHosts++
-                                searchProgress.floatValue = if(isAutoScanRunning.value) (checkedHosts / (totalHosts)) else 0f
-
-                            }
-                        }
-                    }
-                    // Wait for all network checks to complete
-                    jobs.awaitAll()
-
-                }
-                searchProgress.floatValue = 0f
-                showToast(context, "Scan Complete!")
-                if(isAutoScanRunning.value){
-                    hostIdentifierList[0]=1
-                    hostIdentifierList[1]=2
-                }
-                isAutoScanRunning.value=false
-            }
-        }
 
         TitleBar(title="Search Hosts", navSystem=navSystem)
         Box(
@@ -316,146 +159,33 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                     )
                 }
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
-                    Text(
-                        text = "Use Host Identifier",
-                        fontSize = 15.sp,
-                        fontFamily = bahnschriftFamily,
-                        color = Color.Gray
-                    )
-                    Spacer(modifier=Modifier.width(5.dp))
-                    Switch(
-                        checked = checked.value,
-                        onCheckedChange = {
-                            checked.value = it
-                        },
-                        enabled = !isAutoScanRunning.value,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.secondary,
-                            uncheckedThumbColor = MaterialTheme.colorScheme.primary,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.secondary,
-                        )
-                    )
-                    Spacer(modifier=Modifier.width(5.dp))
-                    Text(
-                        text = "Use Host Range",
-                        fontSize = 15.sp,
-                        fontFamily = bahnschriftFamily,
-                        color = Color.Gray
-                    )
-                }
-                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
-                    if(checked.value){
-                        FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                            OutlinedTextField(
-                                modifier=Modifier.width(100.dp),
-                                value = if (hostIdentifierList[0] == 0) "" else hostIdentifierList[0].toString(),
-                                onValueChange = {newValue->
-                                    if(newValue.isEmpty()){
-                                        hostIdentifierList[0]=0
-                                    }else{
-                                        newValue.toIntOrNull()?.let { parsedValue->
-                                            hostIdentifierList[0] = parsedValue
-                                        }
-                                    }
-                                },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                label = { Text("Start") },
-                                // This is the key part - control cursor behavior
-                                visualTransformation = VisualTransformation.None,
-                                // Set selection to end of input after changes
-                                singleLine = true
-                            )
-                            Spacer(modifier=Modifier.width(10.dp))
-                            OutlinedTextField(
-                                modifier=Modifier.width(100.dp),
-                                value = if (hostIdentifierList[1] == 0) "" else hostIdentifierList[1].toString(),
-                                onValueChange = {newValue->
-                                    if(newValue.isEmpty()){
-                                        hostIdentifierList[1]=0
-                                    }else{
-                                        newValue.toIntOrNull()?.let { parsedValue->
-                                            hostIdentifierList[1] = parsedValue
-                                        }
-                                    }
-
-                                },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                label = { Text("End") },
-                                // This is the key part - control cursor behavior
-                                visualTransformation = VisualTransformation.None,
-                                // Set selection to end of input after changes
-                                singleLine = true
-                            )
-                        }
-                    }else{
-                        OutlinedTextField(
-                            modifier=Modifier.width(120.dp),
-                            value = if (hostIdentifierList[0] == 0) "" else hostIdentifierList[0].toString(),
-                            onValueChange = {newValue->
-                                if(newValue.isEmpty()){
-                                    hostIdentifierList[0]=0
-                                }else{
-                                    newValue.toIntOrNull()?.let { parsedValue->
-                                        hostIdentifierList[0] = parsedValue
-                                    }
-                                }
-                            },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            label = { Text("Identifier") }
-                        )
-                    }
-                }
-                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
-                    FrigonTechGenButton(text=scanMessage.value,
-                        enabled = !isAutoScanRunning.value,
-                        onClick = {
-                        if(checked.value && hostIdentifierList[1]<=hostIdentifierList[0]){
-                            showToast(context, "Range End cannot be smaller than Range Start")
-                        }else{makeSubnetsFromRangeAndCheckAvailability()}})
-                    Spacer(modifier=Modifier.width(5.dp))
                     FrigonTechStateButton(
                         onClick = {
-                            if(!isAutoScanRunning.value){
-                                isAutoScanRunning.value=true
-                                makeSubnetsFromRangeAndCheckAvailability(autoScan = true)
+                            if(!isScanRunning.value){
+                                isScanRunning.value=true
+                                startScanningForServers(context, port=loadPort)
                             }else{
-                                scanJob?.cancel()
-                                isAutoScanRunning.value=false
-                                showToast(context, "Scan Cancelled by user" +
-                                        "")
-                                hostIdentifierList[0]=1
-                                hostIdentifierList[1]=2
+                                stopScanningForServers()
+                                isScanRunning.value=false
+                                showToast(context, "Scan Cancelled by user")
                                 searchProgress.floatValue=0f
                             }
                         },
-                        cancelState = isAutoScanRunning.value,
+                        cancelState = isScanRunning.value,
                         content = {
                             Icon(
-                                imageVector = if(isAutoScanRunning.value)Icons.Rounded.Cancel else Icons.Rounded.WifiFind,
+                                imageVector = if(isScanRunning.value)Icons.Rounded.Cancel else Icons.Rounded.WifiFind,
                                 contentDescription = null,
                                 tint = White
                             )
                             Spacer(modifier=Modifier.width(5.dp))
                             Text(
-                                text = if(!isAutoScanRunning.value)"Auto Scan" else "Stop Scan",
+                                text = if(!isScanRunning.value)"Auto Scan" else "Stop Scan",
                                 fontFamily = bahnschriftFamily,
                                 fontSize = 16.sp,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
-                    )
-                }
-                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
-                    Text(
-                        text ="Total hosts to scan: ${if(checked.value) {
-                            hostIdentifierList[1] - hostIdentifierList[0]
-                        } else {
-                            (if (hostIdentifierList[0] > 0) 1 else 0)
-                        }} at ${localIPv4AD.split('.').take(3).joinToString(".")+"."}${if(!displayIPBeingSearched.value.isEmpty()) (displayIPBeingSearched.value).split('.').last() else "x"}:$loadPort;",
-                        fontSize = 12.sp,
-                        fontFamily = bahnschriftFamily,
-                        color = Color.Gray
                     )
                 }
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
@@ -474,12 +204,12 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                         .fillMaxHeight()
                         .fillMaxWidth()) {
                         items(
-                            count = foundDeviceHostDetails.size
+                            count = lftuc_currentServers.size
                         ){ index->
                             NetworkHostCard(
-                                foundDeviceHostDetails[index].deviceName,
-                                foundDeviceHostDetails[index].deviceIPv4,
-                                loadPort.toString()
+                                lftuc_currentServers[index].ServerName,
+                                lftuc_currentServers[index].ServerAddress,
+                                lftuc_currentServers[index].ServerPort.toString()
                             )
                         }
                     }
@@ -626,11 +356,7 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                             Text("Cancel", color = Color.White)
                         }
                         Button(
-                            onClick = {authSuccessful.value=authenticateAndStoreSession(
-                                server="${showMenu.currentServer.value}",
-                                username=username.value,
-                                password=password.value
-                            )},//handle authorization
+                            onClick = {},//handle authorization
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
                         ) {
                             Text("Go", color = Color.White)
