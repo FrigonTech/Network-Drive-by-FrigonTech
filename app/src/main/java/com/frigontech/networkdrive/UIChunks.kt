@@ -50,6 +50,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.rounded.Adb
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.FileCopy
+import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.FolderCopy
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.LibraryAddCheck
@@ -134,8 +136,12 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
             // Uses a pop-up on the other device // Still experimental!
             contextActionsList.add(ContextAction(Icons.Rounded.Adb, "Grab Access Point", {
                 try{
-                    FileManagerData.accessedServers.add(Triple(showMenu.currentServerName.value, showMenu.currentServer.value, ""))
-                    showToast(context, "Successfully grabbed access point...")
+                    if(!FileManagerData.accessedServers.any { it.second.contains(showMenu.currentServer.value)}){
+                        FileManagerData.accessedServers.add(Triple(showMenu.currentServerName.value, showMenu.currentServer.value, ""))
+                        showToast(context, "Successfully grabbed access point...")
+                    }else{
+                        showToast(context, "Access point already exists...")
+                    }
                 }catch(e: Exception){
                     showToast(context, "There was a problem in grabbing access point...")
                 }
@@ -158,12 +164,13 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
                     mapFileObjectToLFTUCServer(
                         fileObjectList = listOf(showMenu.folderPath.value?:"")
                     )
+                    FileManagerData.refreshExtFileManager.value=true
                 }))
         }
         showMenu.caller.value.contains("FileCard")-> {//Files
             contextActionsList.clear()
-            contextActionsList.add(ContextAction(Icons.Rounded.FolderOpen, "Open File", {}))
-            contextActionsList.add(ContextAction(Icons.Rounded.FolderCopy, "Copy File", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.FileOpen, "Open File", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy File", {}))
             contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut File", {}))
             contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {}))
         }

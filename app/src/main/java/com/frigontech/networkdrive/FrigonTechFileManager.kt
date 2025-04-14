@@ -73,6 +73,7 @@ fun folderNavigator(folderPath: String): List<Pair<String, String>> {
 
 object FileManagerData{
     val accessedServers = mutableStateListOf<Triple<String, String, String>>(Triple("My Device", "", "")) //Device Name, IP Address, FolderPath
+    val refreshExtFileManager = mutableStateOf(false)
 }
 
 @Composable
@@ -96,14 +97,24 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
     // State to Hold Server Path
     val currentServerFolder = remember{mutableStateOf("")}
     // Folder contents based on the current folder
-    val folderContents = remember(currentFolder.value) {
-        folderNavigator(currentFolder.value) // Fetch folder names and paths
+    val folderContents = remember(currentFolder.value, FileManagerData.refreshExtFileManager.value) {
+        // Fetch folder contents only if the condition is true
+        if (currentFolder.value.isNotEmpty() || FileManagerData.refreshExtFileManager.value) {
+            folderNavigator(currentFolder.value) // Fetch folder names and paths
+        } else {
+            emptyList() // Return an empty list if the condition is false
+        }
     }
     //server Folder contents based on current server folder
     val serverFolderContents = remember{mutableStateListOf<String>()}
     // Initial setup with the root directory
     LaunchedEffect(Unit) {
         currentFolder.value = Environment.getExternalStorageDirectory().absolutePath
+    }
+    LaunchedEffect(FileManagerData.refreshExtFileManager.value) {
+        if(FileManagerData.refreshExtFileManager.value){
+            FileManagerData.refreshExtFileManager.value=false
+        }
     }
 
     fun navigateToParentFolder() {
@@ -185,6 +196,8 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                         modifier=Modifier
                             .padding(0.dp)
                             .size(37.dp)
+                            .clickable(onClick = { if(!isNavigatingServer.value){
+                                FileManagerData.refreshExtFileManager.value=true} })
                     )
                     Icon(
                         imageVector = Icons.Rounded.Home,
