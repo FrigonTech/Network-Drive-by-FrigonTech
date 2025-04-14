@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -119,21 +120,30 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
         if (text.isNullOrBlank()) false else (text == "true")
         //------------------------------------//^^^^^^^^^^^ this is a way to directly pass bool value
     }
-    val foundLFTUCServers = remember{mutableListOf<LFTUCServers>()}
+    val LFTUCServers = remember{mutableStateListOf<LFTUCServers>()}
 
     LaunchedEffect(Unit) {
-        snapshotFlow { isScanRunning.value }
-            .collect { isRunning ->
-                if (isRunning) {
-                    while (isScanRunning.value) {
-                        val newServers =
-                            lftuc_currentServers.filterNot { foundLFTUCServers.contains(it) }
-                        foundLFTUCServers.addAll(newServers)
-                        searchProgress.floatValue += 1 / 29
-                        delay(2000)
-                    }
+        while (true) {
+            if(isScanRunning.value){
+                // Get new servers from the module
+                val currentServers = lftuc_getCurrentServers() // Replace with actual call
+
+                // Only add servers that aren't already in the list
+                val updatedServers = currentServers.filterNot { it in LFTUCServers }
+
+                if (updatedServers.isNotEmpty()) {
+                    LFTUCServers.addAll(updatedServers)
+                }
+
+                //get servers that went offline
+                val outdatedServers = LFTUCServers.filterNot { it in currentServers }
+
+                if(outdatedServers.isNotEmpty()){
+                    LFTUCServers.removeAll(outdatedServers)
                 }
             }
+            delay(1000) // Poll every 1s
+        }
     }
 
     Column(modifier=Modifier
@@ -142,7 +152,7 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
         var scanMessage = "Scan for LFTUC Servers"
 
 
-        TitleBar(title="Search Hosts", navSystem=navSystem)
+        TitleBar(title="Search Hosts", navSystem=navSystem, {})
         Box(
             modifier = Modifier
                 .weight(1f) // This makes the Box take all remaining space
@@ -150,14 +160,14 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                 .padding(bottom=5.dp, start=5.dp, end=5.dp,top=0.dp)
         ){
             Column {
-                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center,
-                    modifier=Modifier.padding(0.dp)) {
-                    LinearProgressIndicator(
-                        progress = { searchProgress.floatValue },
-                        modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(7.dp)),
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
-                }
+//                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center,
+//                    modifier=Modifier.padding(0.dp)) {
+//                    LinearProgressIndicator(
+//                        progress = { searchProgress.floatValue },
+//                        modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(7.dp)),
+//                        color = MaterialTheme.colorScheme.tertiary,
+//                    )
+//                } commenting it for reference to add it in file transfer operations
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
                     FrigonTechStateButton(
                         onClick = {
@@ -171,7 +181,7 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                                 searchProgress.floatValue=0f
                             }
                         },
-                        cancelState = isScanRunning.value,
+                        canCancel = isScanRunning.value,
                         content = {
                             Icon(
                                 imageVector = if(isScanRunning.value)Icons.Rounded.Cancel else Icons.Rounded.WifiFind,
@@ -202,14 +212,13 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                     LazyColumn(modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .fillMaxWidth()) {
-                        items(
-                            count = lftuc_currentServers.size
-                        ){ index->
+                        .fillMaxWidth()
+                    ) {
+                        items(LFTUCServers) { server->
                             NetworkHostCard(
-                                lftuc_currentServers[index].ServerName,
-                                lftuc_currentServers[index].ServerAddress,
-                                lftuc_currentServers[index].ServerPort.toString()
+                                server.ServerName,
+                                server.ServerAddress,
+                                server.ServerPort.toString()
                             )
                         }
                     }
@@ -298,6 +307,7 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
         isOpen = showMenu.menuVisible.value,
         onClose = { showMenu.menuVisible.value = false }
     )
+    //construct-SMB Auth
     @Composable
     fun AnimatedSMBAuth(isOpen: Boolean, onClose: () -> Unit) {
         val animatedProgress by animateFloatAsState(

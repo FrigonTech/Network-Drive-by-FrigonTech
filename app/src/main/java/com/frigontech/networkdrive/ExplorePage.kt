@@ -11,6 +11,7 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
@@ -52,6 +54,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,6 +82,11 @@ import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
 import kotlinx.coroutines.delay
 import com.frigontech.lftuc_1.lftuc_main_lib.*
+import com.frigontech.networkdrive.ui.theme.getBanner
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 //Font Family
@@ -90,8 +98,39 @@ private val isScanningState = mutableStateOf(false)
 
 // Server state object to track server status
 object ServerState {
-    val serverLive = mutableStateOf(false)
-    val serverAddress = mutableStateOf("")
+    val updatingMonitoringStatus = mutableStateOf(false)
+    val ServerOnline = mutableStateOf(false)
+}
+
+suspend fun ep_StartServer(context: Context) {
+    startServer(context, displayName)
+    ServerState.updatingMonitoringStatus.value = true
+    while(true){
+        val currentStatus = lftuc_getServerRunning()
+        println("server running = $currentStatus")
+        ServerState.ServerOnline.value = currentStatus
+        if(currentStatus){
+            ServerState.updatingMonitoringStatus.value = false
+            break
+        }
+        delay(1000)
+    }
+}
+
+suspend fun ep_StopServer() {
+    stopServer()
+    ServerState.updatingMonitoringStatus.value = true
+    delay(500)
+    while(true){
+        val currentStatus = lftuc_getServerRunning()
+        println("server running = $currentStatus")
+        ServerState.ServerOnline.value = currentStatus
+        if(!currentStatus){
+            ServerState.updatingMonitoringStatus.value = false
+            break
+        }
+        delay(1000)
+    }
 }
 
 //get android shared preferences to know if the app has been started first time since install
@@ -122,6 +161,8 @@ fun getCurrentWifiName(context: Context): String {
 fun ExplorePage(navSystem: NavController) {
     val navigatoryName = "LFTUC Server"
     val context = LocalContext.current
+    val isOnline = ServerState.ServerOnline.value
+    val buttonHaultScope = rememberCoroutineScope()
 
     // Change to a mutable state for WiFi name
     var wifiName by remember { mutableStateOf("Fetching...") }
@@ -170,6 +211,9 @@ fun ExplorePage(navSystem: NavController) {
         refreshWifiName()
         if(!areAllPermissionsGranted(context)){
             requestPermissions(context)
+        }
+        if(!checkSpecificPermission(context, 9)){
+            requestSpecificPermission(context, 9)
         }
         specifiedPort = retrieveTextData(context, "port").toIntOrNull()?: 8080
         sMBJ_ID = if(!retrieveTextData(context, "SMBJ1").isNullOrBlank()) retrieveTextData(context, "SMBJ1") else displayName
@@ -220,11 +264,13 @@ fun ExplorePage(navSystem: NavController) {
             )
         }
 
-        Box(modifier = Modifier.fillMaxSize().graphicsLayer {
-            // Set the transformOrigin to ensure scaling happens from the left edge
-            transformOrigin = TransformOrigin(0f, 0.5f) // 0f = left, 0.5f = vertical center
-            scaleX = (animatedProgress)
-        }) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                // Set the transformOrigin to ensure scaling happens from the left edge
+                transformOrigin = TransformOrigin(0f, 0.5f) // 0f = left, 0.5f = vertical center
+                scaleX = (animatedProgress)
+            }) {
 
 
             // Sidebar content
@@ -235,10 +281,12 @@ fun ExplorePage(navSystem: NavController) {
                     .clip(RoundedCornerShape(13.dp))
                     .background(MaterialTheme.colorScheme.background)
                     .padding(5.dp)
-                    .clickable(enabled = if(firstOpen.value)true else false) { /* Prevent click-through */ }
+                    .clickable(enabled = if (firstOpen.value) true else false) { /* Prevent click-through */ }
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
-                FrigonTechRow(modifier = Modifier.height(50.dp).fillMaxWidth()
+                FrigonTechRow(modifier = Modifier
+                    .height(50.dp)
+                    .fillMaxWidth()
                     .height(60.dp)) {
                     Text(
                         text = "Navigation Menu",
@@ -261,7 +309,7 @@ fun ExplorePage(navSystem: NavController) {
                     navSystem.navigate("settings")
                 }
                 SidebarMenuItem(icon = Icons.Rounded.Star, title = "Rate The App") {}
-                SidebarMenuItem(icon = Icons.Rounded.Terminal, title = "Network Interface") {
+                SidebarMenuItem(icon = Icons.Rounded.Terminal, title = "Logs") {
                     navSystem.navigate("network-interface")
                 }
                 SidebarMenuItem(icon = Icons.Rounded.Devices, title = "Configure Details") {
@@ -272,25 +320,6 @@ fun ExplorePage(navSystem: NavController) {
                 }
                 SidebarMenuItem(icon = Icons.Rounded.Folder, title="Device Storage") {
                     navSystem.navigate("file-manager")
-                }
-                Column(modifier=Modifier.fillMaxWidth()){
-                    LazyColumn {
-                        items(count= lftuc_currentServers.size){ index->
-                            FrigonTechRow {
-                                Icon(
-                                    imageVector = Icons.Rounded.Devices,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = lftuc_currentServers.get(index).ServerName.takeLast(10),
-                                    fontFamily = bahnschriftFamily,
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -337,7 +366,17 @@ fun ExplorePage(navSystem: NavController) {
                 }
             }
 
-            // Content area - rest of the screen
+            Spacer(Modifier.height(20.dp))
+
+            // middle area displaying banner
+            Image(
+                painter = painterResource(id = getBanner()),
+                contentDescription = null
+            )
+
+            Spacer(Modifier.height(40.dp))
+
+            // bottom area of the screen
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -357,32 +396,46 @@ fun ExplorePage(navSystem: NavController) {
                         modifier = Modifier.clip(RoundedCornerShape(7.dp)),
                         colors = ButtonDefaults.buttonColors(
                             // Make the difference more noticeable
-                            containerColor = if(enableButton)MaterialTheme.colorScheme.tertiary else Color.Gray.copy(alpha = 0.5f),
-                            contentColor = if(enableButton)MaterialTheme.colorScheme.primary else Color.Gray
+                            containerColor = if(enableButton && !ServerState.updatingMonitoringStatus.value)MaterialTheme.colorScheme.tertiary else Color.Gray.copy(alpha = 0.5f),
+                            contentColor = if(enableButton && !ServerState.updatingMonitoringStatus.value)MaterialTheme.colorScheme.primary else Color.Gray
                         ),
                         onClick = {
-                            if (ServerState.serverLive.value && enableButton) {
-                                stopServer()
-                            }else if(!ServerState.serverLive.value && enableButton){
-                                if(displayName.isEmpty()){
-                                    //show snackbar
-                                    snackbarController("Please Configure Host", "Go", 2500, navSystem)
-                                }else{
-                                    startServer(context, displayName)
+                            when {
+                                !isOnline -> {
+                                    if (enableButton || !ServerState.updatingMonitoringStatus.value) {
+                                        if (displayName.isEmpty()) {
+                                            snackbarController("Please Configure Host", "Go", 2500, navSystem)
+                                        } else {
+                                            buttonHaultScope.launch{
+                                                ep_StartServer(context)
+                                            }
+                                        }
+                                    }
                                 }
 
-                            } else {
-                                showToast(context, "Please accept the 'Disclaimer/Warning' statements on the Settings page.", toastLength = Toast.LENGTH_LONG)
+                                isOnline && enableButton && !ServerState.updatingMonitoringStatus.value -> {
+                                    buttonHaultScope.launch {
+                                        ep_StopServer()
+                                    }
+                                }
+
+                                else -> {
+                                    showToast(context, "Please accept the 'Disclaimer/Warning' statements on the Settings page.", toastLength = Toast.LENGTH_LONG)
+                                }
                             }
                         }
                     ) {
                         Icon(
-                            imageVector = if(ServerState.serverLive.value) Icons.Filled.StopCircle else Icons.Rounded.Build,
+                            imageVector = if(isOnline) {
+                                Icons.Filled.StopCircle
+                            }else{
+                                Icons.Rounded.Build
+                            },
                             contentDescription = null,
                             // Don't set tint here as it overrides the button's content color system
                         )
                         Text(
-                            text = if(ServerState.serverLive.value) "Stop Service" else "Start Service",
+                            text = if(isOnline) "Stop Service" else "Start Service",
                             fontSize = 16.sp,
                             fontFamily = bahnschriftFamily,
                             // Don't set color here as it overrides the button's content color system
@@ -398,26 +451,26 @@ fun ExplorePage(navSystem: NavController) {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = if(ServerState.serverLive.value) Icons.Rounded.Info else Icons.Rounded.PlayArrow,
+                        imageVector = if(isOnline) Icons.Rounded.Info else Icons.Rounded.PlayArrow,
                         contentDescription = "Status Indicator",
                         tint = MaterialTheme.colorScheme.primary
                     )
 
                     Column {
                         Text(
-                            text = if(ServerState.serverLive.value) {
+                            text = if(isOnline) {
                                 "Localhost is online!"
                             } else {
                                 "Localhost is offline!"
                             },
                             fontSize = 16.sp,
                             fontFamily = bahnschriftFamily,
-                            color = if(ServerState.serverLive.value) ColorManager(frigontech0green) else ColorManager(frigontech0warningred)
+                            color = if(ServerState.ServerOnline.value) ColorManager(frigontech0green) else ColorManager(frigontech0warningred)
                         )
 
-                        if (ServerState.serverLive.value) {
+                        if (isOnline) {
                             Text(
-                                text = "Access at: "+localIPv4AD+":"+ (retrieveTextData(context, "port").toIntOrNull()?: 8080),
+                                text = "Access at: "+lftuc_getLinkLocalIPv6Address()+":"+ (retrieveTextData(context, "port").toIntOrNull()?: 8080),
                                 fontSize = 14.sp,
                                 fontFamily = bahnschriftFamily,
                                 color = MaterialTheme.colorScheme.primary

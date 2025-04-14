@@ -26,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -72,6 +71,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
@@ -94,8 +94,11 @@ object showMenu{
     var menuVisible= mutableStateOf(false)
     var caller= mutableStateOf("")
     var folderPath: MutableState<String?> = mutableStateOf<String?>("")
+    var filePath: MutableState<String?> = mutableStateOf<String?>("")
     var currentServer = mutableStateOf("")
+    var currentServerName = mutableStateOf("")
     var showInputDialogue = mutableStateOf(false)
+    var storageMenu = mutableStateOf(false)
     var replaceSingle = mutableStateOf(false)
     var replaceAll = mutableStateOf(false)
 }
@@ -129,9 +132,14 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
         showMenu.caller.value.contains("NHC")-> {//Network Host Card
             contextActionsList.clear()
             // Uses a pop-up on the other device // Still experimental!
-            contextActionsList.add(ContextAction(Icons.Rounded.Adb, "Request Direct Access [WIP]", {showToast(context, "Feature not available yet")}))
-            contextActionsList.add(ContextAction(Icons.Rounded.Password,"Join Using Credentials", {
-                showMenu.showInputDialogue.value = true
+            contextActionsList.add(ContextAction(Icons.Rounded.Adb, "Grab Access Point", {
+                try{
+                    FileManagerData.accessedServers.add(Triple(showMenu.currentServerName.value, showMenu.currentServer.value, ""))
+                    showToast(context, "Successfully grabbed access point...")
+                }catch(e: Exception){
+                    showToast(context, "There was a problem in grabbing access point...")
+                }
+
             }))
         }
         showMenu.caller.value.contains("NDC")-> {//Network Device Card (devices that are trying to connect or connected to host)
@@ -255,7 +263,7 @@ fun SidebarMenuItem(
 
 //Page TitleBar
 @Composable
-fun TitleBar(title:String, navSystem: NavController){
+fun TitleBar(title:String, navSystem: NavController, Content: @Composable () -> Unit){
     Box(modifier = Modifier                                                                 //The Title-bar box Saying Settings
         .fillMaxWidth()
         .height(90.dp)
@@ -276,24 +284,28 @@ fun TitleBar(title:String, navSystem: NavController){
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 16.dp, end = 16.dp, top = 38.dp, bottom = 18.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Absolute.SpaceBetween
         ){
-            Icon(
+            Row(Modifier.padding(0.dp)) { Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                 contentDescription = null,
                 Modifier.clickable(enabled = true, onClick = { navSystem.navigate("home") })
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-            Text(
-                text=title,
-                fontSize = 20.sp,
-                fontFamily = bahnschriftFamily,
-                color = MaterialTheme.colorScheme.primary
-            )
+                Text(
+                    text=title,
+                    fontSize = 20.sp,
+                    fontFamily = bahnschriftFamily,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Row(Modifier.padding(0.dp), verticalAlignment = Alignment.CenterVertically) {
+                Content()
+            }
         }
-
     }
 }
 
@@ -381,13 +393,13 @@ fun FrigonTechGenButton(modifier:Modifier = Modifier,
 fun FrigonTechStateButton(modifier:Modifier = Modifier,
                         text:String="Button",
                         onClick: () -> Unit,
-                        cancelState: Boolean=false,
+                        canCancel: Boolean=false,
                         content: @Composable () -> Unit = {}
 ){
     val baseModifier = Modifier
         .background(
             shape = RoundedCornerShape(25.dp),
-            color = if (cancelState) (Color.Red) else MaterialTheme.colorScheme.tertiary
+            color = if (canCancel) (Color.Red) else MaterialTheme.colorScheme.tertiary
         )
         .pointerInput(Unit) {
             detectTapGestures(
@@ -402,7 +414,7 @@ fun FrigonTechStateButton(modifier:Modifier = Modifier,
         onClick = {onClick() ;showMenu.menuVisible.value = false},
         colors = ButtonDefaults.buttonColors(
             // Make the difference more noticeable
-            containerColor = if(cancelState) (Color.Red.copy(alpha=0.5f)) else MaterialTheme.colorScheme.tertiary,
+            containerColor = if(canCancel) (Color.Red.copy(alpha=0.5f)) else MaterialTheme.colorScheme.tertiary,
             contentColor = MaterialTheme.colorScheme.primary
         )
     ){
@@ -464,7 +476,7 @@ fun NetworkDeviceCard(deviceName: String, deviceIPv4: String) {
 }
 
 @Composable
-fun NetworkHostCard(deviceName: String, deviceIPv4: String, port: String, SMB: Boolean = false) {
+fun NetworkHostCard(deviceName: String, deviceIPAddress: String, port: String) {
 
     Box(
         modifier = Modifier
@@ -478,7 +490,8 @@ fun NetworkHostCard(deviceName: String, deviceIPv4: String, port: String, SMB: B
                     detectTapGestures(
                         onLongPress = {
                             showMenu.menuVisible.value = true; showMenu.caller.value = "NHC"
-                            showMenu.currentServer.value = deviceIPv4
+                            showMenu.currentServer.value = deviceIPAddress
+                            showMenu.currentServerName.value = deviceName
                         },
                         onTap = { showMenu.menuVisible.value = false }
                     )
@@ -522,7 +535,7 @@ fun NetworkHostCard(deviceName: String, deviceIPv4: String, port: String, SMB: B
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Host Address and Data: ${deviceIPv4}:${port}/data.json",
+                        text = "lftuc://${deviceIPAddress}:${port}/",
                         fontSize = 14.sp,
                         color = Color.Gray
                     )
@@ -562,7 +575,7 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
                         }
                     )
                 },
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary) // Transparent Card
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary) // matching the color pallete
         ) {
             Row(
                 modifier = Modifier
@@ -608,37 +621,72 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
 fun fileIcon(extension:String): Int{
     return when(extension){
         "png"->R.drawable.extension_png//for png
-        else->R.drawable.folder_icon//default fallback
+        "txt"->R.drawable.extension_txt
+        else->R.drawable.extension_unknown//default fallback
     }
 }
 
 @Composable //see folders listed in the page in 'list view'
-fun FileCard_ListView(fileName:String){
-    val extension:String= fileName.split('.')[1]
+fun FileCard_ListView(fileName:String, filePath:String, onClick: () -> Unit){
+    val extension:String= fileName.split('.').last()
     Box(modifier=Modifier.fillMaxWidth()){
         Card(modifier= Modifier
             .fillMaxWidth()
+            .height(70.dp)
+            .padding(horizontal = 2.dp, vertical = 2.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {
-                        showMenu.menuVisible.value = true; showMenu.caller.value = "FileCard"
+                        // Debug log to verify the long press is detected
+                        println("Long press detected on $fileName")
+                        showMenu.menuVisible.value = true
+                        showMenu.caller.value =
+                            "${fileName/*.split('/').lastOrNull() ?: fileName*/}-FileCard"
+                        showMenu.filePath.value = filePath
                     },
-                    onTap = { showMenu.menuVisible.value = false; /* handle accessing the file */ }
+                    onTap = { showMenu.menuVisible.value = false;
+                        onClick()
+                    }
                 )
-            }){
-            Image(
-                painter = painterResource(id= fileIcon(extension)),
-                contentDescription = null,
-                modifier=Modifier
-                    .size(40.dp)
-                    .padding(end = 7.dp)
-            )
-            Text(
-                text=fileName,
-                fontFamily = bahnschriftFamily,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.primary
-            )
+            },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary) // matching the color pallete
+        )
+        {
+            Row(
+                modifier = Modifier
+                    .fillMaxHeight()
+            ) {
+                // Left Column; File Icon
+                Box(
+                    modifier = Modifier
+                        .width(60.dp)
+                        .fillMaxHeight()
+                        .padding(start = 5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id= fileIcon(extension)),
+                        contentDescription = null,
+                        modifier=Modifier
+                            .size(70.dp)
+                            .padding(end = 7.dp)
+                    )
+                }
+
+                //Right Column; File Name
+                Row(modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 5.dp, end = 5.dp, top = 0.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text=fileName,
+                        fontFamily = bahnschriftFamily,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }

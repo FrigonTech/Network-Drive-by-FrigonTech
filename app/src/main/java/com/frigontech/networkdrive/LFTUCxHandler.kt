@@ -2,6 +2,12 @@ package com.frigontech.networkdrive
 
 import android.content.Context
 import com.frigontech.lftuc_1.lftuc_main_lib.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 
 fun startServer(context: Context, deviceName:String,){
     startLFTUCServer(context)
@@ -9,7 +15,7 @@ fun startServer(context: Context, deviceName:String,){
 }
 
 fun stopServer(){
-    stopServer()
+    stopLFTUCServer()
     stopLFTUCMulticastEcho()
 }
 
@@ -37,3 +43,19 @@ fun mapFileObjectToLFTUCServer(fileObjectList: List<String>){
     }
 }
 
+fun requestFilesInServerDirectory(
+    serverAddress: String,
+    path: String = "",
+    onSuccess: (List<String>) -> Unit,
+    onError: (String) -> Unit
+) {
+    LFTUCRequestSharedFolder(serverAddress, specifiedPort, path, object : LFTUCFolderCallback {
+        override fun onResult(files: List<String>) {
+            onSuccess(files)
+        }
+
+        override fun onError(errorMessage: String) {
+            onError(errorMessage)
+        }
+    })
+}

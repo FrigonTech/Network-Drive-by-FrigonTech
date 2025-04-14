@@ -79,7 +79,7 @@ fun SettingsPage(navSystem: NavController, focusManager: FocusManager) {
     ){
         Column(modifier=Modifier.fillMaxSize()
         ) {
-            TitleBar(title="Settings", navSystem=navSystem)
+            TitleBar(title="Settings", navSystem=navSystem, {})
 
             LazyColumn(
                 modifier = Modifier
@@ -144,18 +144,27 @@ fun SettingsPage(navSystem: NavController, focusManager: FocusManager) {
                                         .padding(3.dp)
                                     ){
                                         Text(
-                                            text = "This app requests location permissions in order to determine the network name." +
-                                                    "Making this device a localhost and hosting a json file to collect the necessary" +
-                                                    "data of the device(s) that are needed in order to facilitate a seamless remote" +
-                                                    "file transfer mechanism on terms of SMBJ (Service Message Block) protocol which" +
-                                                    "is also used by windows devices to share file remotely on the LAN, so in order to " +
-                                                    "be able to share files between android->android, android->windows and windows->android" +
-                                                    "we use this same protocol and use our legitimate ways to determine the necessary network" +
-                                                    "and device information to make this possible in just a few taps on your little screen." +
-                                                    "By enabling this service, you acknowledge that you are fully responsible for how it is " +
-                                                    "used on your device. If someone else gains access to your phone and activates this feature, " +
-                                                    "it remains your responsibility. The developer is not liable for any unintended data exposure " +
-                                                    "due to misuse or unauthorized access",
+                                            text = "This application requires access to your device’s location and Wi-Fi state " +
+                                                    "permissions in order to retrieve technical information about your device’s WLAN " +
+                                                    "network interface, including the ability to access local IP addresses. " +
+                                                    "While the request for location access may raise concerns, " +
+                                                    "please be advised that this requirement is explicitly defined by the Android " +
+                                                    "operating system for obtaining Wi-Fi-related data. In this distribution of the " +
+                                                    "application, the device’s local IPv6 address is utilized to instantiate a local " +
+                                                    "server that facilitates file sharing between devices on the same Local Area Network " +
+                                                    "(LAN). The server operates on a port number specified by the user within the “Configure " +
+                                                    "Details” section of the application. For device discovery across the LAN, the application " +
+                                                    "employs multicast communication on the standard group address 239.255.255.250. This " +
+                                                    "method restricts visibility to devices connected to the same Wi-Fi network. However, " +
+                                                    "please note that any device present on the same network, including unauthorized or " +
+                                                    "untrusted ones, may receive these multicast packets. A user with malicious intent " +
+                                                    "and access to the same subnet may be able to scan for active servers and identify " +
+                                                    "associated IP addresses. It is further acknowledged that the LFTUC server implementation " +
+                                                    "does not incorporate encryption or security mechanisms. This design decision is intentional " +
+                                                    "to reduce computational overhead and to prioritize transfer speed and operational " +
+                                                    "efficiency. Users are hereby notified that the use of this application entails " +
+                                                    "inherent security trade-offs, and it is recommended that file transfers be conducted " +
+                                                    "only on trusted and secure local networks.",
                                             fontSize = 14.sp,
                                             fontFamily = bahnschriftFamily,
                                             color = MaterialTheme.colorScheme.primary
@@ -212,7 +221,9 @@ fun SettingsPage(navSystem: NavController, focusManager: FocusManager) {
                                     )
                                     Spacer(modifier=Modifier.width(5.dp))
                                     Text(
-                                        text = "I confirm that I have read, understood, and accept the 'Disclaimer' and 'Warning' sections.",
+                                        text = "I hereby confirm that I have read and fully understood the contents of the 'Disclaimer' " +
+                                                "and 'Warning' sections, and I expressly acknowledge and accept all associated risks " +
+                                                "and responsibilities as outlined therein.",
                                         fontSize = 14.sp,
                                         fontFamily = bahnschriftFamily,
                                         color = MaterialTheme.colorScheme.primary
@@ -224,7 +235,6 @@ fun SettingsPage(navSystem: NavController, focusManager: FocusManager) {
                             FrigonTechRow {
                                 Checkbox(
                                     checked = provideRootAccessOrNot.value,
-                                    enabled = !provideRootAccessOrNot.value,
                                     onCheckedChange = {
                                         val newState = !provideRootAccessOrNot.value
                                         provideRootAccessOrNot.value = newState

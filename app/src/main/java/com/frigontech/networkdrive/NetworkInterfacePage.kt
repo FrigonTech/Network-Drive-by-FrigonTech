@@ -2,9 +2,6 @@
 
 package com.frigontech.networkdrive
 
-
-
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -13,27 +10,63 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.frigontech.lftuc_1.lftuc_main_lib
 import com.frigontech.lftuc_1.lftuc_main_lib.*
 import com.frigontech.networkdrive.ui.theme.ColorManager
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0terminal
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 var localIPv4AD: String = lftuc_getLocalIpv4Address()
 
 @Composable
 fun NetworkInterfacePage(navSystem: NavController, focusManager: FocusManager) {
+    val messages = remember { mutableStateListOf<String>() }  // State-backed list
+
+    LaunchedEffect(Unit) {
+        // Add initial static messages
+        messages.add("--Tester Started Here--")
+        messages.add("⚠️local ipv4 - $localIPv4AD")
+        messages.add("⚠️link-local ipv6 address - ${lftuc_getLinkLocalIPv6Address()}")
+
+        while (true) {
+            // Get new messages from the module
+            val newMessages = lftuc_getReceivedMessages()
+
+            // Add only messages that aren't already in the list
+            val updatedMessages = newMessages.filterNot { it in messages }
+
+            if (updatedMessages.isNotEmpty()) {
+                messages.addAll(updatedMessages)
+            }
+
+            delay(500) // Poll every 500ms
+        }
+    }
 
     //Making a Terminal like Vertical Text containing structure
     Column(modifier = Modifier.fillMaxSize().pointerInput(Unit){detectTapGestures {focusManager.clearFocus()}}) {
-        TitleBar(title = "Network Interface", navSystem = navSystem )
+        TitleBar(title = "Logs", navSystem = navSystem, {})
         //Code Style Body
         // Terminal-like black box (fills remaining space)
         Box(
@@ -51,47 +84,15 @@ fun NetworkInterfacePage(navSystem: NavController, focusManager: FocusManager) {
                 // For example, showing the IP address
 
                 LazyColumn {
-                    items(count=lftuc_receivedMessages.size) {index->
+                    items(messages) { message ->  // Pass the state list directly
                         Text(
-                            text = lftuc_receivedMessages[index],
+                            text = message,
                             color = ColorManager(frigontech0green),
                             modifier = Modifier.padding(16.dp)
                         )
                     }
                 }
             }
-
         }
     }
 }
-
-//// Function to get the device's IP address
-//fun getLocalIpAddress(): String {
-//    try {
-//        // Get all network interfaces
-//        val networkInterfaces = Collections.list(NetworkInterface.getNetworkInterfaces())
-//
-//        for (networkInterface in networkInterfaces) {
-//            // Skip loopback interfaces and interfaces that are down
-//            if (networkInterface.isLoopback || !networkInterface.isUp) {
-//                continue
-//            }
-//
-//            // Check each address in the interface
-//            val addresses = Collections.list(networkInterface.inetAddresses)
-//            for (address in addresses) {
-//                // Skip loopback addresses and IPv6 addresses
-//                if (address.isLoopbackAddress || address.hostAddress.contains(":")) {
-//                    continue
-//                }
-//
-//                // Return the first valid IPv4 address
-//                return address.hostAddress
-//            }
-//        }
-//    } catch (e: Exception) {
-//        e.printStackTrace()
-//    }
-//
-//    return "null"
-//}

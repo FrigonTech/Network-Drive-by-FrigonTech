@@ -61,8 +61,10 @@ fun ConfigurePage(navSystem: NavController, focusManger: FocusManager) {
         sMBJ_PASS = myPASS.value
     }
 
-    Column(modifier = Modifier.fillMaxSize().pointerInput(Unit){detectTapGestures {focusManger.clearFocus()}}) {
-        TitleBar(title = "Configure Details", navSystem = navSystem)
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .pointerInput(Unit) { detectTapGestures { focusManger.clearFocus() } }) {
+        TitleBar(title = "Configure Details", navSystem = navSystem, {})
 
         LazyColumn(
             modifier = Modifier
@@ -74,7 +76,15 @@ fun ConfigurePage(navSystem: NavController, focusManger: FocusManager) {
                     OutlinedTextField(
                         modifier=Modifier.fillMaxWidth(),
                         value = deviceName.value,  // Access the value property here
-                        onValueChange = { deviceName.value = it },
+                        onValueChange = {
+                            if(it.last()!= ' '){
+                                if(deviceName.value != "MyDevice") {
+                                    deviceName.value = it
+                                }else{
+                                    deviceName.value = ""
+                                }
+                            }
+                        },
                         label = { Text("Enter a Device Name", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
                     )
                 }

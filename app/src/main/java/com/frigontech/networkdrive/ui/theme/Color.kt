@@ -1,13 +1,11 @@
 package com.frigontech.networkdrive.ui.theme
 
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.State
 import androidx.compose.ui.graphics.Color
-import kotlin.reflect.full.memberFunctions
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.isAccessible
+import com.frigontech.networkdrive.R
 
 @Composable
 fun ColorManager(colors: List<Color>): Color {
@@ -16,6 +14,13 @@ fun ColorManager(colors: List<Color>): Color {
     }.value
 }
 
+@Composable
+fun getBanner(): Int {
+    val banners = listOf(R.drawable.background_darkmode, R.drawable.background_lightmode)
+    return remember {
+        derivedStateOf { if (IsDarkMode.isDarkMode.value) banners[0] else banners[1] }
+    }.value
+}
 
 // Color Definitions
 object Colors {
