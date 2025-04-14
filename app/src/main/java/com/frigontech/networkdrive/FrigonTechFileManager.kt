@@ -465,8 +465,9 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                                     onError = { error ->
                                         scope.launch {
                                             println("Failed to fetch files: $error")
-                                            showToast(context, "Failure in requesting server DIR...")
+                                            showToast(context, "Server went offline unexpectedly...")
                                             isNavigatingServer.value = false
+                                            FileManagerData.accessedServers.remove(device)
                                             onClose()
                                         }
                                     }
