@@ -77,12 +77,14 @@ fun ConfigurePage(navSystem: NavController, focusManger: FocusManager) {
                         modifier=Modifier.fillMaxWidth(),
                         value = deviceName.value,  // Access the value property here
                         onValueChange = {
-                            if(it.last()!= ' '){
-                                if(deviceName.value != "MyDevice") {
+                            if (it.isNotEmpty() && it.last() != ' ') {
+                                if (deviceName.value != "MyDevice") {
                                     deviceName.value = it
-                                }else{
+                                } else {
                                     deviceName.value = ""
                                 }
+                            } else if (it.isEmpty()) {
+                                deviceName.value = ""
                             }
                         },
                         label = { Text("Enter a Device Name", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
@@ -112,30 +114,30 @@ fun ConfigurePage(navSystem: NavController, focusManger: FocusManager) {
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
                     FrigonTechGenButton(text = "Save Port", onClick = { focusManger.clearFocus(); saveTextData(context, "port", myPort.intValue.toString(), "New Port Specified") })
                 }
-                HorizontalDivider()
-                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
-                    OutlinedTextField(
-                        modifier=Modifier.fillMaxWidth(),
-                        value = myID.value,  // Access the value property here
-                        onValueChange = { myID.value = it },
-                        label = { Text("Enter Authentication ID", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
-                    )
-                }
-                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
-                    FrigonTechGenButton(text = "Save ID", onClick = { focusManger.clearFocus(); saveTextData(context, "SMBJ1", myID.value, "Auth ID Saved") })
-                }
-                HorizontalDivider()
-                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
-                    OutlinedTextField(
-                        modifier=Modifier.fillMaxWidth(),
-                        value = myPASS.value,  // Access the value property here
-                        onValueChange = { myPASS.value = it },
-                        label = { Text("Enter Authentication Password", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
-                    )
-                }
-                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
-                    FrigonTechGenButton(text = "Save Password", onClick = { focusManger.clearFocus(); saveTextData(context, "SMBJ2", myPASS.value, "Auth Password Saved") })
-                }
+//                HorizontalDivider()
+//                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
+//                    OutlinedTextField(
+//                        modifier=Modifier.fillMaxWidth(),
+//                        value = myID.value,  // Access the value property here
+//                        onValueChange = { myID.value = it },
+//                        label = { Text("Enter Authentication ID", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
+//                    )
+//                }
+//                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
+//                    FrigonTechGenButton(text = "Save ID", onClick = { focusManger.clearFocus(); saveTextData(context, "SMBJ1", myID.value, "Auth ID Saved") })
+//                }
+//                HorizontalDivider()
+//                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
+//                    OutlinedTextField(
+//                        modifier=Modifier.fillMaxWidth(),
+//                        value = myPASS.value,  // Access the value property here
+//                        onValueChange = { myPASS.value = it },
+//                        label = { Text("Enter Authentication Password", fontFamily = bahnschriftFamily, fontSize = 14.sp) }
+//                    )
+//                }
+//                FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
+//                    FrigonTechGenButton(text = "Save Password", onClick = { focusManger.clearFocus(); saveTextData(context, "SMBJ2", myPASS.value, "Auth Password Saved") })
+//                }
             }
         }
     }

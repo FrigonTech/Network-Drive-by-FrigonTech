@@ -4,8 +4,13 @@ import android.R
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -66,6 +71,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.White
 import androidx.compose.ui.graphics.TransformOrigin
@@ -113,7 +120,7 @@ import com.frigontech.lftuc_1.lftuc_main_lib.*
 fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
     val context = LocalContext.current
     var loadPort = retrieveTextData(context, "port").toIntOrNull()?: 8080
-    var hostSearchResult: MutableState<String> = remember{ mutableStateOf("No host(s) found on port: ${loadPort}")}
+    var hostSearchResult: MutableState<String> = remember{ mutableStateOf("")}
     var searchProgress = remember{ mutableFloatStateOf(0f) }
     var isScanRunning = remember {mutableStateOf(false)}
     val followSMBProtocol = retrieveTextData(context, "SMB").let { text ->
@@ -141,6 +148,14 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                 if(outdatedServers.isNotEmpty()){
                     LFTUCServers.removeAll(outdatedServers)
                 }
+
+                if(LFTUCServers.size>0){
+                    hostSearchResult.value = "Scanning: Host(s) found on port: ${loadPort}"
+                }else{
+                    hostSearchResult.value = "Scanning: No host(s) found on port: ${loadPort}"
+                }
+            }else{
+                hostSearchResult.value = "Not Scanning..."
             }
             delay(1000) // Poll every 1s
         }
@@ -152,7 +167,15 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
         var scanMessage = "Scan for LFTUC Servers"
 
 
-        TitleBar(title="Search Hosts", navSystem=navSystem, {})
+        TitleBar(title="Search Hosts", navSystem=navSystem, Content={},
+            onGoToHome = {
+                stopScanningForServers()
+                isScanRunning.value=false
+                showToast(context, "Scan Cancelled by user")
+                searchProgress.floatValue=0f
+            }
+        )
+
         Box(
             modifier = Modifier
                 .weight(1f) // This makes the Box take all remaining space
@@ -167,7 +190,48 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
 //                        modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(7.dp)),
 //                        color = MaterialTheme.colorScheme.tertiary,
 //                    )
-//                } commenting it for reference to add it in file transfer operations
+//                } change this with a continous loading bar like vertical from Zarchiver
+                FrigonTechRow(modifier = Modifier.height(9.dp)) {
+                    @Composable
+                    fun ShimmerThrobber(modifier: Modifier = Modifier, isScanning:Boolean) {
+                        val shimmerColors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.2f),
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                        val transition = rememberInfiniteTransition()
+                        val translateAnim = transition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 2000f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 1500, easing = EaseInOut)
+                            )
+                        )
+
+                        val brush = Brush.linearGradient(
+                            colors = shimmerColors,
+                            start = Offset(translateAnim.value - 1000f, 0f),
+                            end = Offset(translateAnim.value, 0f)
+                        )
+                        //add throbber height animation
+                        val animatedHeight by animateDpAsState(
+                            targetValue = if (isScanning) 5.dp else 0.dp,
+                            animationSpec = tween(durationMillis = 370),
+                            label = "shimmer effect"
+                        )
+                        Spacer(
+                            modifier = modifier
+                                .fillMaxWidth()
+                                .height(animatedHeight)
+                                .clip(RoundedCornerShape(15.dp))
+                                .background(brush)
+                        )
+                    }
+                    ShimmerThrobber(
+                        isScanning = isScanRunning.value
+                    )
+
+                }
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center) {
                     FrigonTechStateButton(
                         onClick = {

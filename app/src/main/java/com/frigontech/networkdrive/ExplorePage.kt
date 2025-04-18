@@ -51,13 +51,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
@@ -77,12 +80,13 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.edit
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.frigontech.networkdrive.ui.theme.ColorManager
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
 import kotlinx.coroutines.delay
 import com.frigontech.lftuc_1.lftuc_main_lib.*
-import com.frigontech.networkdrive.ui.theme.getBanner
+import com.frigontech.networkdrive.ui.theme.GetBanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -219,6 +223,7 @@ fun ExplorePage(navSystem: NavController) {
         sMBJ_ID = if(!retrieveTextData(context, "SMBJ1").isNullOrBlank()) retrieveTextData(context, "SMBJ1") else displayName
         sMBJ_PASS = if(!retrieveTextData(context, "SMBJ2").isNullOrBlank()) retrieveTextData(context, "SMBJ2") else (localIPv4AD + "45ctuiy1b39f3")
         displayName = if(!retrieveTextData(context, "device-name").isNullOrBlank()) retrieveTextData(context, "device-name") else lftuc_getLocalIpv4Address().toString()
+
     }
 
     // Monitor permission changes
@@ -242,7 +247,9 @@ fun ExplorePage(navSystem: NavController) {
             label = "sidebar scale anim"
         )
         // Smooth opacity animation
-        val animatedOpacity = animatedProgress * 0.9f
+        val animatedOpacity by remember {
+            derivedStateOf { animatedProgress * 0.9f }
+        }
 
         LaunchedEffect(Unit) {
             delay(370)
@@ -270,7 +277,9 @@ fun ExplorePage(navSystem: NavController) {
                 // Set the transformOrigin to ensure scaling happens from the left edge
                 transformOrigin = TransformOrigin(0f, 0.5f) // 0f = left, 0.5f = vertical center
                 scaleX = (animatedProgress)
-            }) {
+            }
+            .alpha(animatedProgress)
+        ) {
 
 
             // Sidebar content
@@ -288,15 +297,17 @@ fun ExplorePage(navSystem: NavController) {
                     .height(50.dp)
                     .fillMaxWidth()
                     .height(60.dp)) {
+                    val heading = remember {"Navigation Menu"}
                     Text(
-                        text = "Navigation Menu",
+                        text = heading,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = bahnschriftFamily,
                         overflow = TextOverflow.Ellipsis
                     )
+                    val closeIcon = remember{Icons.Rounded.Close}
                     Icon(
-                        imageVector = Icons.Rounded.Close,
+                        imageVector = closeIcon,
                         tint = MaterialTheme.colorScheme.primary,
                         contentDescription = null,
                         modifier = Modifier
@@ -368,11 +379,7 @@ fun ExplorePage(navSystem: NavController) {
 
             Spacer(Modifier.height(20.dp))
 
-            // middle area displaying banner
-            Image(
-                painter = painterResource(id = getBanner()),
-                contentDescription = null
-            )
+            //GetBanner()
 
             Spacer(Modifier.height(40.dp))
 
@@ -480,12 +487,11 @@ fun ExplorePage(navSystem: NavController) {
                 }
             }
         }
-
-        // Render the sidebar overlay and content
-        AnimatedSidebarContent(
-            isOpen = isSidebarOpen,
-            onClose = { isSidebarOpen = false },
-            navSystem = navSystem
-        )
     }
+    // Render the sidebar overlay and content
+    AnimatedSidebarContent(
+        isOpen = isSidebarOpen,
+        onClose = { isSidebarOpen = false },
+        navSystem = navSystem
+    )
 }

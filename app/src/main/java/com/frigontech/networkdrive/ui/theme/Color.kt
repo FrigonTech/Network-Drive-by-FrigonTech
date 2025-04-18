@@ -5,20 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import com.frigontech.networkdrive.R
 
 @Composable
 fun ColorManager(colors: List<Color>): Color {
     return remember {
         derivedStateOf { if (IsDarkMode.isDarkMode.value) colors[0] else colors[1] }
-    }.value
-}
-
-@Composable
-fun getBanner(): Int {
-    val banners = listOf(R.drawable.background_darkmode, R.drawable.background_lightmode)
-    return remember {
-        derivedStateOf { if (IsDarkMode.isDarkMode.value) banners[0] else banners[1] }
     }.value
 }
 

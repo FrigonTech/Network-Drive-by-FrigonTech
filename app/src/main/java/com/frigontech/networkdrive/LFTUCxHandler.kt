@@ -8,6 +8,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 fun startServer(context: Context, deviceName:String,){
     startLFTUCServer(context)
@@ -27,16 +29,21 @@ fun stopScanningForServers(){
     stopLFTUCMulticastListener()
 }
 
-fun mapFileObjectToLFTUCServer(fileObjectList: List<String>){
+fun mapFileObjectToLFTUCServer(fileObjectList: List<String>, replaceFiles:Boolean = false){
     //WARNING: send absolute file path strings in this list
     for(file in fileObjectList){
-        if(moveFileObjectToLFTUCSharedDir(file)){
+        if(moveFileObjectToLFTUCSharedDir(file, replaceFiles)){
             lftuc_receivedMessages.add("file/folder$file moved")
+            FileManagerData.refreshExtFileManager.value=true
         }else{
-            if(lftuc_needToReplaceObject){
-                //ask for replacement
-                continue
-            }else{
+            if (lftuc_getNeedToReplaceObject()) {
+                val currentFileIndex = fileObjectList.indexOf(file)
+                val lastIndex = fileObjectList.size
+                FileManagerData.filesLeftWhileMappingToLFTUCServer.clear()
+                FileManagerData.filesLeftWhileMappingToLFTUCServer.addAll(fileObjectList.subList(currentFileIndex, lastIndex))
+                FileManagerData.isBatchCopy.value = false
+                showMenu.replaceMenu.value=true
+            } else {
                 lftuc_receivedMessages.add("unknown problem while moving file to shared dir.")
             }
         }
@@ -57,5 +64,45 @@ fun requestFilesInServerDirectory(
         override fun onError(errorMessage: String) {
             onError(errorMessage)
         }
+
+        override fun onProgress(p0: Int) {}
+
+        override fun onGotFileSize(p0: String?) {}
+
+        override fun onDownloadComplete(p0: String?) {}
     })
+}
+
+fun downloadFileFromServer(
+    serverAddress: String,
+    path: String = "",
+    onProgress: (Int) -> Unit,
+    onComplete: (String) -> Unit
+) {
+    if(path.contains("[FILE]")){
+        showMenu.downloadFileDialogue.value = true
+        LFTUCRequestSharedFolder(serverAddress, specifiedPort, path, object : LFTUCFolderCallback {
+            override fun onResult(files: List<String>) {}
+
+            override fun onError(errorMessage: String) {}
+
+            override fun onProgress(downloadProgress: Int) {
+                onProgress(downloadProgress)
+            }
+
+            override fun onGotFileSize(fileSize: String) {
+                FileManagerData.lftuc_RequestedFileSize.value = fileSize
+            }
+
+            override fun onDownloadComplete(downloadSuccessMessage: String) {
+                onComplete(downloadSuccessMessage)
+            }
+        })
+    }else{
+        println("can't perform this task")
+    }
+}
+
+fun cancelLFTUCFileDownload(){
+    cancelFileDownload()
 }

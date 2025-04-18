@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.rounded.Adb
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.FileCopy
 import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.FolderCopy
@@ -70,6 +71,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -101,8 +103,12 @@ object showMenu{
     var currentServerName = mutableStateOf("")
     var showInputDialogue = mutableStateOf(false)
     var storageMenu = mutableStateOf(false)
+    var replaceMenu = mutableStateOf(false)
     var replaceSingle = mutableStateOf(false)
     var replaceAll = mutableStateOf(false)
+    var onDecisionMade: (() -> Unit)? = null
+    var createFolderDialogue = mutableStateOf(false)
+    val downloadFileDialogue = mutableStateOf(false)
 }
 
 //controlling instead of setting all variables individually
@@ -155,25 +161,130 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
         }
         showMenu.caller.value.contains("FolderCard")-> {//Folders
             contextActionsList.clear()
-            contextActionsList.add(ContextAction(Icons.Rounded.FolderOpen, "Open Folder", {}))
-            contextActionsList.add(ContextAction(Icons.Rounded.FolderCopy, "Copy Folder", {}))
-            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Folder", {}))
-            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.FolderOpen, "Open Folder", {
+                //add a safe check to prevent this opetion frmo working while multiselect
+                if(!FileManagerData.isMultiSelectOn.value){
+                    showMenu.menuVisible.value = false
+                    FileManagerData.currentFolder.value = showMenu.folderPath.value?:""
+                }else{
+                    showToast(context, "This operation is invalid in multi-select mode")
+                }
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.FolderCopy, "Copy Folder", {
+                //remove all previous copied files for reserving space for just this folder
+                if(!showMenu.folderPath.value!!.isEmpty()){
+                    FileManagerData.batchFilesToReplace.clear()
+                    FileManagerData.cutFiles.clear()
+                    FileManagerData.copiedFiles.clear()
+                    FileManagerData.copiedFiles.addAll(listOf((showMenu.folderPath.value)?:""))
+                    showToast(context, "folder copied")
+                }
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Folder", {
+                //remove all previous cut files to reserve space in memory for this file
+                if(!showMenu.folderPath.value!!.isEmpty()) {
+                    FileManagerData.batchFilesToReplace.clear()
+                    FileManagerData.copiedFiles.clear()
+                    FileManagerData.cutFiles.clear()
+                    FileManagerData.cutFiles.addAll(listOf((showMenu.folderPath.value) ?: ""))
+                    showToast(context, "folder cut into memory")
+                }
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {
+                pasteFileObject()
+            }))
             contextActionsList.add(ContextAction(Icons.Rounded.WifiTethering, "Map To Network",
                 {//perform a check for if the id and password is configured!
                     mapFileObjectToLFTUCServer(
                         fileObjectList = listOf(showMenu.folderPath.value?:"")
                     )
-                    FileManagerData.refreshExtFileManager.value=true
+                    showToast(context, "folder mapped to server")
                 }))
+            contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Create Folder Here", {
+                showMenu.createFolderDialogue.value = true
+                showToast(context, "folder created")
+            }))
         }
         showMenu.caller.value.contains("FileCard")-> {//Files
             contextActionsList.clear()
             contextActionsList.add(ContextAction(Icons.Rounded.FileOpen, "Open File", {}))
-            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy File", {}))
-            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut File", {}))
-            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {}))
+            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy File", {
+                if(!showMenu.filePath.value!!.isEmpty()) {
+                    FileManagerData.batchFilesToReplace.clear()
+                    FileManagerData.cutFiles.clear()
+                    FileManagerData.copiedFiles.clear()
+                    FileManagerData.copiedFiles.addAll(listOf((showMenu.filePath.value) ?: ""))
+                    showToast(context, "file copied")
+                }
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut File", {
+                if(!showMenu.filePath.value!!.isEmpty()) {
+                    FileManagerData.batchFilesToReplace.clear()
+                    FileManagerData.copiedFiles.clear()
+                    FileManagerData.cutFiles.clear()
+                    FileManagerData.cutFiles.addAll(listOf((showMenu.filePath.value) ?: ""))
+                    showToast(context, "file cut into memory")
+                }
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {
+                pasteFileObject()
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Create Folder Here", {
+                showMenu.createFolderDialogue.value = true
+                showToast(context, "folder created")
+            }))
         }
+        showMenu.caller.value.contains("FileCards")-> {//Files
+            contextActionsList.clear()
+            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy Files", {
+                if(!FileManagerData.multiSelectFiles.isEmpty()) {
+                    FileManagerData.batchFilesToReplace.clear()
+                    FileManagerData.cutFiles.clear()
+                    FileManagerData.copiedFiles.clear()
+                    FileManagerData.copiedFiles.addAll(FileManagerData.multiSelectFiles)
+                    showToast(context, "multiple files copied")
+                }
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Files", {
+                if(!FileManagerData.multiSelectFiles.isEmpty()) {
+                    FileManagerData.batchFilesToReplace.clear()
+                    FileManagerData.copiedFiles.clear()
+                    FileManagerData.cutFiles.clear()
+                    FileManagerData.cutFiles.addAll(FileManagerData.multiSelectFiles)
+                    showToast(context, "multiple files cut")
+                }
+            }))
+        }
+        showMenu.caller.value.contains("NetworkFile")-> {//Files
+            contextActionsList.clear()
+            contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Download File", {
+                downloadFileFromServer(serverAddress = FileManagerData.currentServerAddress.value,
+                    path = FileManagerData.currentServerFolder.value +"/"+ FileManagerData.lftuc_FileToRequest.value,
+
+                    onProgress = {progress->
+                        FileManagerData.lftuc_DownloadProgress.value = progress/100f
+                    },
+                    onComplete = {completeMessage ->
+                        FileManagerData.lftuc_DownloadCompleteMessage.value = completeMessage
+                    }
+                )
+
+                println("REquested file : ${FileManagerData.lftuc_FileToRequest.value} from ${FileManagerData.currentServerFolder.value}")
+            }))
+        }
+        showMenu.caller.value.contains("NetworkFolder")-> {/*no options*/}
+        showMenu.caller.value.contains("FileManagerPage")-> {//Files
+            contextActionsList.clear()
+            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Paste Here", {
+                pasteFileObject()
+                showToast(context, "multiple files pasted")
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Create Folder", {
+                showMenu.createFolderDialogue.value = true
+                showToast(context, "folder created")
+            }))
+        }
+        showMenu.caller.value.contains("NetworkFileManagerPage")-> {/*empty*/}
     }
     return contextActionsList
 }
@@ -239,6 +350,8 @@ fun SidebarMenuItem(
     title: String,
     onClick: () -> Unit = {}
 ) {
+    val currenticon = remember { icon }
+    val currenttitle = remember{title}
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -250,7 +363,7 @@ fun SidebarMenuItem(
             .padding(7.dp)
     ) {
         Icon(
-            imageVector = icon,
+            imageVector = currenticon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary
         )
@@ -258,7 +371,7 @@ fun SidebarMenuItem(
         Spacer(modifier = Modifier.width(16.dp))
 
         Text(
-            text = title,
+            text = currenttitle,
             fontSize = 14.sp,
             fontFamily = bahnschriftFamily,
             style = MaterialTheme.typography.bodyLarge,
@@ -270,7 +383,7 @@ fun SidebarMenuItem(
 
 //Page TitleBar
 @Composable
-fun TitleBar(title:String, navSystem: NavController, Content: @Composable () -> Unit){
+fun TitleBar(title:String, navSystem: NavController, Content: @Composable () -> Unit, onGoToHome: ()->Unit = {}){
     Box(modifier = Modifier                                                                 //The Title-bar box Saying Settings
         .fillMaxWidth()
         .height(90.dp)
@@ -297,7 +410,7 @@ fun TitleBar(title:String, navSystem: NavController, Content: @Composable () -> 
             Row(Modifier.padding(0.dp)) { Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                 contentDescription = null,
-                Modifier.clickable(enabled = true, onClick = { navSystem.navigate("home") })
+                Modifier.clickable(enabled = true, onClick = { navSystem.navigate("home"); onGoToHome() })
             )
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -553,7 +666,7 @@ fun NetworkHostCard(deviceName: String, deviceIPAddress: String, port: String) {
 }
 
 @Composable
-fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> Unit) {
+fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> Unit, isNetworkFolder: Boolean = false) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -572,7 +685,9 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
                             println("Long press detected on $folderName")
                             showMenu.menuVisible.value = true
                             showMenu.caller.value =
-                                "${folderName.split('/').lastOrNull() ?: folderName}-FolderCard"
+                                "${
+                                    folderName.split('/').lastOrNull() ?: folderName
+                                }- ${if (isNetworkFolder) "NetworkFolder" else "FolderCard"}"
                             showMenu.folderPath.value = folderPath
                         },
                         onTap = {
@@ -627,14 +742,79 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
 @DrawableRes
 fun fileIcon(extension:String): Int{
     return when(extension){
-        "png"->R.drawable.extension_png//for png
-        "txt"->R.drawable.extension_txt
+    // images
+        "png" -> R.drawable.extension_png
+        "jpg" -> R.drawable.extension_jpg
+        "jpeg" -> R.drawable.extension_jpeg
+        "gif" -> R.drawable.extension_gif
+        "bmp" -> R.drawable.extension_bmp
+        "webp" -> R.drawable.extension_webp
+        "tiff" -> R.drawable.extension_tiff
+        "svg" -> R.drawable.extension_svg
+
+    // text documents
+        "txt" -> R.drawable.extension_txt
+        "pdf" -> R.drawable.extension_pdf
+        "doc" -> R.drawable.extension_doc
+        "docx" -> R.drawable.extension_docx
+        "xls" -> R.drawable.extension_xls
+        "xlsx" -> R.drawable.extension_xlsx
+        "ppt" -> R.drawable.extension_ppt
+        "pptx" -> R.drawable.extension_pptx
+        "rtf" -> R.drawable.extension_rtf
+        "odt" -> R.drawable.extension_odt
+        "json" -> R.drawable.extension_json
+
+    // audio
+        "mp3" -> R.drawable.extension_mp3
+        "wav" -> R.drawable.extension_wav
+        "ogg" -> R.drawable.extension_ogg
+        "flac" -> R.drawable.extension_flac
+        "aac" -> R.drawable.extension_aac
+        "m4a" -> R.drawable.extension_m4a
+
+    // video
+        "mp4" -> R.drawable.extension_mp4
+        "mkv" -> R.drawable.extension_mkv
+        "avi" -> R.drawable.extension_avi
+        "mov" -> R.drawable.extension_mov
+        "wmv" -> R.drawable.extension_wmv
+        "flv" -> R.drawable.extension_flv
+        "webm" -> R.drawable.extension_webm
+
+    // archives
+        "zip" -> R.drawable.extension_zip
+        "rar" -> R.drawable.extension_rar
+        "tar" -> R.drawable.extension_tar
+        "7z" -> R.drawable.extension_7z
+        "gz" -> R.drawable.extension_gz
+        "bz2" -> R.drawable.extension_bz2
+
+    // code
+        "java" -> R.drawable.extension_java
+        "cpp" -> R.drawable.extension_cpp
+        "js" -> R.drawable.extension_js
+        "html" -> R.drawable.extension_html
+        "css" -> R.drawable.extension_css
+        "xml" -> R.drawable.extension_xml
+        "py" -> R.drawable.extension_py
+        "sh" -> R.drawable.extension_sh
+        "kt" -> R.drawable.extension_kt
+
+    // others
+        "iso" -> R.drawable.extension_iso
+        "exe" -> R.drawable.extension_exe
+        "apk" -> R.drawable.extension_apk
+        "csv" -> R.drawable.extension_csv
+        "md" -> R.drawable.extension_md
+        "epub" -> R.drawable.extension_epub
+
         else->R.drawable.extension_unknown//default fallback
     }
 }
 
 @Composable //see folders listed in the page in 'list view'
-fun FileCard_ListView(fileName:String, filePath:String, onClick: () -> Unit){
+fun FileCard_ListView(fileName:String, filePath:String, onClick: () -> Unit, isNetworkFile: Boolean = false){
     val extension:String= fileName.split('.').last()
     Box(modifier=Modifier.fillMaxWidth()){
         Card(modifier= Modifier
@@ -645,13 +825,20 @@ fun FileCard_ListView(fileName:String, filePath:String, onClick: () -> Unit){
                 detectTapGestures(
                     onLongPress = {
                         // Debug log to verify the long press is detected
-                        println("Long press detected on $fileName")
+
                         showMenu.menuVisible.value = true
                         showMenu.caller.value =
-                            "${fileName/*.split('/').lastOrNull() ?: fileName*/}-FileCard"
+                            "${fileName}-${if (isNetworkFile) "NetworkFile" else "FileCard"}"
+                        println("Long press detected on ${showMenu.caller.value}")
                         showMenu.filePath.value = filePath
+                        if (isNetworkFile) {
+                            FileManagerData.lftuc_FileToRequest.value = "[FILE]${fileName}"
+                        } else {
+                            FileManagerData.lftuc_FileToRequest.value = ""
+                        }
                     },
-                    onTap = { showMenu.menuVisible.value = false;
+                    onTap = {
+                        showMenu.menuVisible.value = false;
                         onClick()
                     }
                 )
@@ -682,8 +869,8 @@ fun FileCard_ListView(fileName:String, filePath:String, onClick: () -> Unit){
 
                 //Right Column; File Name
                 Row(modifier = Modifier
-                        .fillMaxSize()
-                        .padding(start = 5.dp, end = 5.dp, top = 0.dp),
+                    .fillMaxSize()
+                    .padding(start = 5.dp, end = 5.dp, top = 0.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
