@@ -751,6 +751,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                                 FileManagerData.isNavigatingServer.value = false
                                 FileManagerData.currentServerFolder.value = ""
                                 navigateToParentFolder()
+                                onClose()
                             }
                         })) //make an arrangement
                     }
@@ -1202,7 +1203,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                 ){
                     Text(
                         text = if(downloadProgressText.isEmpty())
-                            "$downloadProgressText% Complete of $downloadFileSize"
+                            "$downloadProgress% Complete of $downloadFileSize"
                         else "Download Complete: $downloadProgressText, file size: $downloadFileSize",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Light,
@@ -1218,7 +1219,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                         .fillMaxWidth()
                         .height(37.dp)
                         .clip(RoundedCornerShape(25.dp))
-                        .background(color = ColorManager(if (downloadProgressText.isEmpty()) frigontech0warningred else frigontech0green))
+                        .background(color = if (downloadProgressText.isEmpty()) ColorManager(frigontech0warningred) else ColorManager(frigontech0green))
                         .clickable(onClick = {
                             if (downloadProgressText.isEmpty()) {
                                 cancelLFTUCFileDownload()

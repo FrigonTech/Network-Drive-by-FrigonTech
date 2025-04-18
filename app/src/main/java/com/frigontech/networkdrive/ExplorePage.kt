@@ -86,7 +86,6 @@ import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
 import kotlinx.coroutines.delay
 import com.frigontech.lftuc_1.lftuc_main_lib.*
-import com.frigontech.networkdrive.ui.theme.GetBanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

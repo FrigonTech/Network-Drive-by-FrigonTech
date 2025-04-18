@@ -262,7 +262,7 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
                     path = FileManagerData.currentServerFolder.value +"/"+ FileManagerData.lftuc_FileToRequest.value,
 
                     onProgress = {progress->
-                        FileManagerData.lftuc_DownloadProgress.value = progress/100f
+                        FileManagerData.lftuc_DownloadProgress.value = progress.toFloat()
                     },
                     onComplete = {completeMessage ->
                         FileManagerData.lftuc_DownloadCompleteMessage.value = completeMessage

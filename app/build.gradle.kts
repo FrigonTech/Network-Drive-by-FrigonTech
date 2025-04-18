@@ -120,5 +120,5 @@ dependencies {
     //JCIFS
     implementation("eu.agno3.jcifs:jcifs-ng:2.1.9")
     //LFTUC-1 module by FrigonTech from jitpack.io
-    implementation("com.github.FrigonTech:LFTUC-1:v1.3.4")
+    implementation("com.github.FrigonTech:LFTUC-1:v1.3.5")
 }
