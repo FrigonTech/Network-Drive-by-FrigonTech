@@ -262,7 +262,7 @@ object FileManagerData{
     val refreshExtFileManager = mutableStateOf(false)
     val currentFolder = mutableStateOf("")
     val isMultiSelectOn = mutableStateOf(false)
-//    val multiSelectFiles = mutableStateListOf<String>()
+//  val multiSelectFiles = mutableStateListOf<String>()
     var copiedFiles = mutableStateListOf<String>()
     var cutFiles = mutableStateListOf<String>()
     var batchFilesToReplace = mutableStateListOf<Pair<File, File>>() // [0] is original file ref, [1] is destination file ref
