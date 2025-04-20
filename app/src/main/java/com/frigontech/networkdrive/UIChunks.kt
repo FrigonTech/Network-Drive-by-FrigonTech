@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import java.util.concurrent.TimeUnit
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -92,6 +93,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 //vars
 object showMenu{
@@ -109,6 +113,7 @@ object showMenu{
     var onDecisionMade: (() -> Unit)? = null
     var createFolderDialogue = mutableStateOf(false)
     val downloadFileDialogue = mutableStateOf(false)
+    val findPathMenu = mutableStateOf(false)
 }
 
 //controlling instead of setting all variables individually
@@ -195,10 +200,15 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
             }))
             contextActionsList.add(ContextAction(Icons.Rounded.WifiTethering, "Map To Network",
                 {//perform a check for if the id and password is configured!
-                    mapFileObjectToLFTUCServer(
-                        fileObjectList = listOf(showMenu.folderPath.value?:"")
-                    )
-                    showToast(context, "folder mapped to server")
+                    val resolvedPath = showMenu.folderPath.value?:"invalid"
+                    if(resolvedPath.isNotEmpty()){
+                        mapFileObjectToLFTUCServer(
+                            fileObjectList = listOf()
+                        )
+                        showToast(context, "folder mapped to server")
+                    }else{
+                        showToast(context, "folder not mapped to server")
+                    }
                 }))
             contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Create Folder Here", {
                 showMenu.createFolderDialogue.value = true
@@ -233,28 +243,40 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
                 showMenu.createFolderDialogue.value = true
                 showToast(context, "folder created")
             }))
-        }
-        showMenu.caller.value.contains("FileCards")-> {//Files
-            contextActionsList.clear()
-            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy Files", {
-                if(!FileManagerData.multiSelectFiles.isEmpty()) {
-                    FileManagerData.batchFilesToReplace.clear()
-                    FileManagerData.cutFiles.clear()
-                    FileManagerData.copiedFiles.clear()
-                    FileManagerData.copiedFiles.addAll(FileManagerData.multiSelectFiles)
-                    showToast(context, "multiple files copied")
-                }
-            }))
-            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Files", {
-                if(!FileManagerData.multiSelectFiles.isEmpty()) {
-                    FileManagerData.batchFilesToReplace.clear()
-                    FileManagerData.copiedFiles.clear()
-                    FileManagerData.cutFiles.clear()
-                    FileManagerData.cutFiles.addAll(FileManagerData.multiSelectFiles)
-                    showToast(context, "multiple files cut")
+            contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Map To Network", {
+                //perform a check for if the id and password is configured!
+                val resolvedPath = showMenu.filePath.value?:"invalid"
+                if(resolvedPath.isNotEmpty()){
+                    mapFileObjectToLFTUCServer(
+                        fileObjectList = listOf()
+                    )
+                    showToast(context, "file mapped to server")
+                }else{
+                    showToast(context, "file not mapped to server")
                 }
             }))
         }
+//        showMenu.caller.value.contains("File-Cards")-> {//Files
+//            contextActionsList.clear()
+//            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy Files", {
+//                if(!FileManagerData.multiSelectFiles.isEmpty()) {
+//                    FileManagerData.batchFilesToReplace.clear()
+//                    FileManagerData.cutFiles.clear()
+//                    FileManagerData.copiedFiles.clear()
+//                    FileManagerData.copiedFiles.addAll(FileManagerData.multiSelectFiles)
+//                    showToast(context, "multiple files copied")
+//                }
+//            }))
+//            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Files", {
+//                if(!FileManagerData.multiSelectFiles.isEmpty()) {
+//                    FileManagerData.batchFilesToReplace.clear()
+//                    FileManagerData.copiedFiles.clear()
+//                    FileManagerData.cutFiles.clear()
+//                    FileManagerData.cutFiles.addAll(FileManagerData.multiSelectFiles)
+//                    showToast(context, "multiple files cut")
+//                }
+//            }))
+//        }
         showMenu.caller.value.contains("NetworkFile")-> {//Files
             contextActionsList.clear()
             contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Download File", {
@@ -266,10 +288,12 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
                     },
                     onComplete = {completeMessage ->
                         FileManagerData.lftuc_DownloadCompleteMessage.value = completeMessage
+                        FileManagerData.lftuc_downloadFinishTime.value = getCurrentTimeInString()
+                        FileManagerData.lftuc_totalDownloadDuration.value = getDuration(FileManagerData.lftuc_downloadStartTime.value, FileManagerData.lftuc_downloadFinishTime.value)
                     }
                 )
-
-                println("REquested file : ${FileManagerData.lftuc_FileToRequest.value} from ${FileManagerData.currentServerFolder.value}")
+                FileManagerData.lftuc_isDownloadingFromServer.value=true
+                FileManagerData.lftuc_downloadStartTime.value = getCurrentTimeInString()
             }))
         }
         showMenu.caller.value.contains("NetworkFolder")-> {/*no options*/}
@@ -288,7 +312,33 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
     }
     return contextActionsList
 }
+//Logic that is used frequently or collectively
+fun getCurrentTimeInString():String{
+    val currentTime = System.currentTimeMillis()
+    val formatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+    val formattedTime = formatter.format(Date(currentTime))
+    return formattedTime
+}
 
+fun getDuration(startTimeStr: String, endTimeStr: String): String {
+    val formatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+
+    val startTime = formatter.parse(startTimeStr)
+    val endTime = formatter.parse(endTimeStr)
+
+    val durationMillis = endTime!!.time - startTime!!.time
+
+    // Handle negative durations (if needed)
+    val safeDuration = if (durationMillis < 0) 0 else durationMillis
+
+    return String.format(
+        "%02d:%02d:%02d.%03d",
+        TimeUnit.MILLISECONDS.toHours(safeDuration),
+        TimeUnit.MILLISECONDS.toMinutes(safeDuration) % 60,
+        TimeUnit.MILLISECONDS.toSeconds(safeDuration) % 60,
+        safeDuration % 1000
+    )
+}
 //Defining UI Items that can be repeatedly used!
 
 //Toast Messages
@@ -383,8 +433,11 @@ fun SidebarMenuItem(
 
 //Page TitleBar
 @Composable
-fun TitleBar(title:String, navSystem: NavController, Content: @Composable () -> Unit, onGoToHome: ()->Unit = {}){
-    Box(modifier = Modifier                                                                 //The Title-bar box Saying Settings
+fun TitleBar(title:String, navSystem: NavController, Content: @Composable () -> Unit, onGoToHome: ()->Unit = {
+    FileManagerData.isNavigatingServer.value = false
+    FileManagerData.currentFolder.value = ""
+}){//The Title-bar box Saying Settings
+    Box(modifier = Modifier
         .fillMaxWidth()
         .height(90.dp)
         .background(

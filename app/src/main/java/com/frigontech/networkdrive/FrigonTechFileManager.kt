@@ -31,7 +31,6 @@ import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DevicesOther
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.HorizontalDivider
@@ -263,7 +262,7 @@ object FileManagerData{
     val refreshExtFileManager = mutableStateOf(false)
     val currentFolder = mutableStateOf("")
     val isMultiSelectOn = mutableStateOf(false)
-    val multiSelectFiles = mutableStateListOf<String>()
+//    val multiSelectFiles = mutableStateListOf<String>()
     var copiedFiles = mutableStateListOf<String>()
     var cutFiles = mutableStateListOf<String>()
     var batchFilesToReplace = mutableStateListOf<Pair<File, File>>() // [0] is original file ref, [1] is destination file ref
@@ -278,6 +277,10 @@ object FileManagerData{
     val lftuc_DownloadCompleteMessage = mutableStateOf("")
     val lftuc_FileToRequest = mutableStateOf("")
     val lftuc_RequestedFileSize = mutableStateOf("")
+    val lftuc_isDownloadingFromServer = mutableStateOf(false)
+    val lftuc_downloadStartTime = mutableStateOf("")
+    val lftuc_downloadFinishTime = mutableStateOf("")
+    val lftuc_totalDownloadDuration = mutableStateOf("")
 }
 
 @Composable
@@ -392,15 +395,15 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                     .size(25.dp)
                     .clickable(onClick = { showMenu.storageMenu.value = true })
             )
-            Icon(
-                imageVector = Icons.Rounded.MoreVert,
-                contentDescription = "Options",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier=Modifier
-                    .padding(0.dp)
-                    .size(25.dp)
-                    .clickable(onClick = { })
-            )
+//            Icon(
+//                imageVector = Icons.Rounded.MoreVert,
+//                contentDescription = "Options",
+//                tint = MaterialTheme.colorScheme.primary,
+//                modifier=Modifier
+//                    .padding(0.dp)
+//                    .size(25.dp)
+//                    .clickable(onClick = { })
+//            )
         }) //title bar
         FrigonTechRow(modifier=Modifier
             .height(60.dp)
@@ -470,6 +473,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                         modifier = Modifier
                             .padding(start = 5.dp)
                             .weight(1f)
+                            .clickable(onClick = {if(!FileManagerData.isNavigatingServer.value)showMenu.findPathMenu.value=true})
                     )
 
                 }
@@ -529,8 +533,10 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                                     onError = { error ->
                                         scope.launch {
                                             println("Failed to fetch files: $error")
-                                            showToast(context, "Failure in requesting server DIR...")
-                                            //isNavigatingServer.value = false
+                                            showToast(context, "Server might've went offline...")
+                                            FileManagerData.serverFolderContents.clear()
+                                            navigateToParentFolder()
+                                            FileManagerData.isNavigatingServer.value = false
                                         }
                                     }
                                 )
@@ -1110,13 +1116,14 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
         val downloadProgress by FileManagerData.lftuc_DownloadProgress
         val downloadProgressText by FileManagerData.lftuc_DownloadCompleteMessage
         val downloadFileSize by FileManagerData.lftuc_RequestedFileSize
+        val totalDownloadTime by FileManagerData.lftuc_totalDownloadDuration
 
         // Background overlay
         if (animatedOpacity > 0f || isOpen) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable { onClose() }
+                    .clickable { if(!FileManagerData.lftuc_isDownloadingFromServer.value)onClose() }
                     .alpha(animatedOpacity)
                     .background(Color.Black.copy(alpha = animatedOpacity))
             )
@@ -1136,7 +1143,6 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                     .background(MaterialTheme.colorScheme.background)
                     .padding(5.dp)
                     .background(color = MaterialTheme.colorScheme.background)
-                    .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } }
             ) {
                 Spacer(modifier = Modifier.height(5.dp))
                 FrigonTechRow(
@@ -1203,8 +1209,8 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                 ){
                     Text(
                         text = if(downloadProgressText.isEmpty())
-                            "$downloadProgress% Complete of $downloadFileSize"
-                        else "Download Complete: $downloadProgressText, file size: $downloadFileSize",
+                            "$downloadProgress% Complete of $downloadFileSize; recording download duration..."
+                        else "Download Complete: $downloadProgressText, file size: $downloadFileSize; took $totalDownloadTime",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Light,
                         fontFamily = bahnschriftFamily,
@@ -1223,10 +1229,19 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                         .clickable(onClick = {
                             if (downloadProgressText.isEmpty()) {
                                 cancelLFTUCFileDownload()
+                                FileManagerData.lftuc_isDownloadingFromServer.value=false
+                                FileManagerData.lftuc_DownloadProgress.floatValue=0f
+                                FileManagerData.lftuc_RequestedFileSize.value=""
+                                FileManagerData.lftuc_DownloadCompleteMessage.value=""
                                 showToast(context, "File download cancelled!")
+                            }else{
+                                //If download is complete
+                                onClose()
+                                FileManagerData.lftuc_isDownloadingFromServer.value=false
+                                FileManagerData.lftuc_DownloadProgress.floatValue=0f
+                                FileManagerData.lftuc_RequestedFileSize.value=""
+                                FileManagerData.lftuc_DownloadCompleteMessage.value=""
                             }
-                            onClose()
-                            /* add a mechanism to cancel download*/
                         }),
                     horizontal = Arrangement.Center,
                 ){
@@ -1245,5 +1260,141 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
     AnimatedDownloadMenuContent(
         isOpen = showMenu.downloadFileDialogue.value,
         onClose = { showMenu.downloadFileDialogue.value = false }
+    )
+
+    //construct-find directory menu
+    @Composable
+    fun AnimatedFindPathMenuContent(isOpen: Boolean, onClose: () -> Unit) {
+
+        // Animation value from 0 to 1
+        val animatedProgress by animateFloatAsState(
+            targetValue = if (isOpen) 1f else 0f,
+            animationSpec = tween(durationMillis = 270),
+            label = "sidebar scale anim"
+        )
+        val animatedOpacity = animatedProgress * 0.9f
+
+        // Background overlay
+        if (animatedOpacity > 0f || isOpen) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { onClose() }
+                    .alpha(animatedOpacity)
+                    .background(Color.Black.copy(alpha = animatedOpacity))
+            )
+        }
+
+        val pathName = remember{ mutableStateOf("") }
+
+        // Sidebar content properly aligned at the bottom
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(25.dp))
+                    .width((animatedProgress * 330).dp)
+                    .height((animatedProgress * 335).dp) // Animate the height
+                    //.align(Alignment.BottomCenter) // Anchor to bottom of the screen
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(5.dp)
+                    .background(color = MaterialTheme.colorScheme.background)
+                    .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } }
+            ) {
+                Spacer(modifier = Modifier.height(5.dp))
+                FrigonTechRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .clip(RoundedCornerShape(25.dp))
+                        .background(color = MaterialTheme.colorScheme.surface),
+                    horizontal = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "Network Drive: File Manager",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = bahnschriftFamily,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                HorizontalDivider()
+                Column(modifier = Modifier
+                    .height(47.dp)
+                    .padding(10.dp)){
+                    Text(
+                        text = "Find Directory",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = bahnschriftFamily,
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                FrigonTechRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(99.dp)
+                        .background(color = MaterialTheme.colorScheme.background),
+                    horizontal = Arrangement.Center,
+                ){
+                    OutlinedTextField(
+                        modifier=Modifier.fillMaxWidth(),
+                        value = pathName.value,  // Access the value property here
+                        onValueChange = {
+                            val invalidChars = listOf('*', '`', '\\', '?', ':', ';', '"', '\'', '<', '>', '=', '~', '|')
+                            if(it.isNotEmpty() && it.last() !in invalidChars){
+                                if(pathName.value != "\u0000") {
+                                    pathName.value = it.trim()
+                                }else{
+                                    pathName.value = ""
+                                }
+                            }else{
+                                pathName.value = ""
+                            }
+                        },
+                        label = { Text("Enter Directory Path", fontFamily = bahnschriftFamily, fontSize = 13.sp) }
+                    )
+                }
+                FrigonTechRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(37.dp)
+                        .clip(RoundedCornerShape(25.dp))
+                        .background(
+                            color = if (FileManagerData.filesLeftWhileMappingToLFTUCServer.lastIndex > 0) MaterialTheme.colorScheme.surface else Color.Gray.copy(
+                                0.5f
+                            )
+                        )
+                        .clickable(onClick = {
+                            //check and navigate to path if it exists
+                            val path = File(pathName.value)
+                            if (path.isDirectory) {
+                                FileManagerData.currentFolder.value= pathName.value
+                                onClose()
+                            } else {
+                                showToast(context, "Invalid Path")
+                                onClose()
+                            }
+                        }
+                        ),
+                    horizontal = Arrangement.Center,
+                ){
+                    Text(
+                        text = "Find Directory",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = bahnschriftFamily
+                    )
+                }
+            }
+        }
+    }
+    // Render the sidebar overlay and content
+    AnimatedFindPathMenuContent(
+        isOpen = showMenu.findPathMenu.value,
+        onClose = { showMenu.findPathMenu.value = false }
     )
 }
