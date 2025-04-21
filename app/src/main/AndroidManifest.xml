@@ -26,7 +26,6 @@
         android:icon="@mipmap/networkdriveicon"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/networkdriveicon"
-        android:src="@mipmap/networkdriveicon"
         android:supportsRtl="true"
         android:theme="@style/Theme.NetworkDriveExplorer"
         android:usesCleartextTraffic="true"

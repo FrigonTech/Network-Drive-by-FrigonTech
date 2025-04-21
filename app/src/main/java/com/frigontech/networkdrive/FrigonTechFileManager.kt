@@ -262,7 +262,7 @@ object FileManagerData{
     val refreshExtFileManager = mutableStateOf(false)
     val currentFolder = mutableStateOf("")
     val isMultiSelectOn = mutableStateOf(false)
-//  val multiSelectFiles = mutableStateListOf<String>()
+//    val multiSelectFiles = mutableStateListOf<String>()
     var copiedFiles = mutableStateListOf<String>()
     var cutFiles = mutableStateListOf<String>()
     var batchFilesToReplace = mutableStateListOf<Pair<File, File>>() // [0] is original file ref, [1] is destination file ref
@@ -473,7 +473,10 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                         modifier = Modifier
                             .padding(start = 5.dp)
                             .weight(1f)
-                            .clickable(onClick = {if(!FileManagerData.isNavigatingServer.value)showMenu.findPathMenu.value=true})
+                            .clickable(onClick = {
+                                if (!FileManagerData.isNavigatingServer.value) showMenu.findPathMenu.value =
+                                    true
+                            })
                     )
 
                 }
@@ -1123,7 +1126,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable { if(!FileManagerData.lftuc_isDownloadingFromServer.value)onClose() }
+                    .clickable { if (!FileManagerData.lftuc_isDownloadingFromServer.value) onClose() }
                     .alpha(animatedOpacity)
                     .background(Color.Black.copy(alpha = animatedOpacity))
             )
@@ -1209,7 +1212,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                 ){
                     Text(
                         text = if(downloadProgressText.isEmpty())
-                            "$downloadProgress% Complete of $downloadFileSize; recording download duration..."
+                            "${(downloadProgress*100).toInt()}% Complete of $downloadFileSize; recording download duration..."
                         else "Download Complete: $downloadProgressText, file size: $downloadFileSize; took $totalDownloadTime",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Light,
@@ -1225,22 +1228,26 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                         .fillMaxWidth()
                         .height(37.dp)
                         .clip(RoundedCornerShape(25.dp))
-                        .background(color = if (downloadProgressText.isEmpty()) ColorManager(frigontech0warningred) else ColorManager(frigontech0green))
+                        .background(
+                            color = if (downloadProgressText.isEmpty()) ColorManager(
+                                frigontech0warningred
+                            ) else ColorManager(frigontech0green)
+                        )
                         .clickable(onClick = {
                             if (downloadProgressText.isEmpty()) {
                                 cancelLFTUCFileDownload()
-                                FileManagerData.lftuc_isDownloadingFromServer.value=false
-                                FileManagerData.lftuc_DownloadProgress.floatValue=0f
-                                FileManagerData.lftuc_RequestedFileSize.value=""
-                                FileManagerData.lftuc_DownloadCompleteMessage.value=""
+                                FileManagerData.lftuc_isDownloadingFromServer.value = false
+                                FileManagerData.lftuc_DownloadProgress.floatValue = 0f
+                                FileManagerData.lftuc_RequestedFileSize.value = ""
+                                FileManagerData.lftuc_DownloadCompleteMessage.value = ""
                                 showToast(context, "File download cancelled!")
-                            }else{
+                            } else {
                                 //If download is complete
                                 onClose()
-                                FileManagerData.lftuc_isDownloadingFromServer.value=false
-                                FileManagerData.lftuc_DownloadProgress.floatValue=0f
-                                FileManagerData.lftuc_RequestedFileSize.value=""
-                                FileManagerData.lftuc_DownloadCompleteMessage.value=""
+                                FileManagerData.lftuc_isDownloadingFromServer.value = false
+                                FileManagerData.lftuc_DownloadProgress.floatValue = 0f
+                                FileManagerData.lftuc_RequestedFileSize.value = ""
+                                FileManagerData.lftuc_DownloadCompleteMessage.value = ""
                             }
                         }),
                     horizontal = Arrangement.Center,
@@ -1372,7 +1379,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                             //check and navigate to path if it exists
                             val path = File(pathName.value)
                             if (path.isDirectory) {
-                                FileManagerData.currentFolder.value= pathName.value
+                                FileManagerData.currentFolder.value = pathName.value
                                 onClose()
                             } else {
                                 showToast(context, "Invalid Path")
