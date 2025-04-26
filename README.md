@@ -18,7 +18,7 @@
 
 ## How To Use:
 We'll call the device to take the data from as the 'source device'. And the device you want to receive the data in as the 'receiving device'.
-[⭐- Required; ➕- Optional; ⚠️- Known Problems;]
+[⭐- Required; ➕- Optional; ⚠️- Known Problems]
 
 ### ⭐Setup (Only need to be done the first time app runs after installing):
 - To unlock the functionality of the app, press the ellipsis (three horizontal dots) in the top-left corner, then press "Settings".
