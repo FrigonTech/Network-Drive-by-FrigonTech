@@ -14,7 +14,7 @@
 - **Free Updates**: Get the latest features and improvements with every update.
 
 ## Download Now:
-[![Download Latest APK](https://img.shields.io/badge/Download-Latest%20APK-orange?style=plastic&logo=android&logoColor=white&labelColor=blue&color=orange)](https://github.com/FrigonTech/Network-Drive-by-FrigonTech/releases/download/v1.0.0/Network.Drive.Explorer.-.official.dev.build.apk)
+[![Download Network Drive Explorer v1.0.0 (Latest)](https://img.shields.io/badge/Download-Latest%20APK-orange?style=plastic&logo=android&logoColor=white&labelColor=blue&color=orange)](https://github.com/FrigonTech/Network-Drive-by-FrigonTech/releases/download/v1.0.0/Network.Drive.Explorer.-.official.dev.build.apk)
 
 ## How To Use:
 We'll call the device to take the data from as the 'source device'. And the device you want to receive the data in as the 'receiving device'.
@@ -29,7 +29,7 @@ We'll call the device to take the data from as the 'source device'. And the devi
 
 ### ⭐To Send Files to a Device:
 - Open the app on the 'source device', and press the ellipsis (three horizontal dots) in the top-left corner, then press "Device Storage".
-- Now, find your files or whole folders, then hold them to see a menu and press "Map To Network" (this copies the file/folder(s) to shared location not misplacing the existing file/folder(s)).
+- Now, find your files or whole folders, then hold them to see a menu and press "Map To Network" (this moves the file/folder(s) to shared location so do this carefully; *`Release v1.0.0 has no protection for this.`*).
 - Press the back button in the top left corner, and press **Start Service** button, thats all for the 'source device'. [Proceed to "To Receive Files from a Device" section]
 
 ### ⭐To Receive Files from a Device:
