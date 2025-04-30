@@ -14,7 +14,7 @@ Tutorial video coming soon!
 
 ## Why Choose Network Drive Explorer?
 - **Simple Interface**: Designed with a clean, minimalist layout for ease of use.
-- **High-Speed Access**: Optimized for quick file transfers and minimal latency.
+- **High-Speed File Transfer**: We pinpointed the hassle of integrating .
 - **Free Updates**: Get the latest features and improvements with every update.
 
 ## Download Now:
