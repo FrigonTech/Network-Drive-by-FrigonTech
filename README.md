@@ -9,12 +9,11 @@ Tutorial video coming soon!
 ## Features:
 - **Network Drive Management**: Connect to multiple network drives and manage them all from one place.
 - **File Explorer**: Browse and access files quickly with an easy-to-navigate interface.
-- **Quick Search**: Find files and folders faster with the built-in search functionality.
 - **Fast File Transfer**: Easily upload and download files between your Android device and network drives.
 
 ## Why Choose Network Drive Explorer?
 - **Simple Interface**: Designed with a clean, minimalist layout for ease of use.
-- **High-Speed File Transfer**: We pinpointed the hassle of integrating .
+- **High-Speed File Transfer**: We pinpointed the hassle of integrating unnecessary file transit security and. file end to end encryption when we're on a trusted network(household Wi-Fi, Friend's Wi-Fi, etc.) unlike untrusted or public network(cafe, airport, public places, etc.).
 - **Free Updates**: Get the latest features and improvements with every update.
 
 ## Download Now:
