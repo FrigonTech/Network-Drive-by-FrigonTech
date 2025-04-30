@@ -45,4 +45,6 @@ We'll call the device to take the data from as the 'source device'. And the devi
 ### ➕Preferred Apps (Optional):
 - Best advised to use 'Zarchiver' or any other file manager if you're comfortable.
 
-### ⚠️"Device Storage" not showing files/folders in my device
+### ⚠️"Device Storage" not showing files/folders in my device:
+- This issue occurs in some OEM devices (eg. IQOO Z9x5), still works on most of the devices like Vivo, Motorola, etc.
+- More Devices will be tested soon. If it works on your device, you could send the make and model or just OEM's name in the "Rate The App/ Feedback" for helping in the process.
