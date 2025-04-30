@@ -13,7 +13,7 @@ Tutorial video coming soon!
 
 ## Why Choose Network Drive Explorer?
 - **Simple Interface**: Designed with a clean, minimalist layout for ease of use.
-- **High-Speed File Transfer**: We pinpointed the hassle of integrating unnecessary file transit security and. file end to end encryption when we're on a trusted network(household Wi-Fi, Friend's Wi-Fi, etc.) unlike untrusted or public network(cafe, airport, public places, etc.).
+- **High-Speed File Transfer**: We pinpointed the hassle of integrating unnecessary file transit security and file end to end encryption when we're on a trusted network(household Wi-Fi, Friend's Wi-Fi, etc.) unlike untrusted or public network(cafe, airport, public places, etc.).
 - **Free Updates**: Get the latest features and improvements with every update.
 
 ## Download Now:
