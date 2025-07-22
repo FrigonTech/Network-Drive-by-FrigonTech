@@ -91,10 +91,6 @@ import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import com.frigontech.networkdrive.ui.theme.ColorManager
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0warningred
-import com.hierynomus.smbj.SMBClient
-import com.hierynomus.smbj.auth.AuthenticationContext
-import com.hierynomus.smbj.connection.Connection
-import com.hierynomus.smbj.utils.SmbFiles
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode
@@ -111,7 +107,6 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.URL
-import jcifs.netbios.NbtAddress
 import java.net.UnknownHostException
 import com.frigontech.lftuc_1.lftuc_main_lib.*
 
@@ -128,13 +123,13 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
         //------------------------------------//^^^^^^^^^^^ this is a way to directly pass bool value
     }
     val LFTUCServers = remember{mutableStateListOf<LFTUCServers>()}
-
+    val reloadhosts = remember{mutableStateOf(false)};
     LaunchedEffect(Unit) {
         while (true) {
             if(isScanRunning.value){
                 // Get new servers from the module
                 val currentServers = lftuc_getCurrentServers() // Replace with actual call
-
+                //TO DO: replace this method with foreach which is more robust for this situation
                 // Only add servers that aren't already in the list
                 val updatedServers = currentServers.filterNot { it in LFTUCServers }
 
@@ -147,7 +142,13 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
 
                 if(outdatedServers.isNotEmpty()){
                     LFTUCServers.removeAll(outdatedServers)
+                    //refresh through clever if statement method to recompose the lazycolumn
+                    reloadhosts.value = true;
+                    delay(150)
+                    reloadhosts.value = false
                 }
+
+
 
                 if(LFTUCServers.size>0){
                     hostSearchResult.value = "Scanning: Host(s) found on port: ${loadPort}"
@@ -173,6 +174,7 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                 isScanRunning.value=false
                 showToast(context, "Scan Cancelled by user")
                 searchProgress.floatValue=0f
+                LFTUCServers.clear()
             }
         )
 
@@ -273,22 +275,25 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
                 FrigonTechRow(verticalAlignment = Alignment.CenterVertically, horizontal = Arrangement.Center, modifier=Modifier
                     .weight(1f)
                     .fillMaxWidth()){
-                    LazyColumn(modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .fillMaxWidth()
-                    ) {
-                        items(LFTUCServers) { server->
-                            NetworkHostCard(
-                                server.ServerName,
-                                server.ServerAddress,
-                                server.ServerPort.toString()
-                            )
+
+                    if (!reloadhosts.value){
+                        LazyColumn(modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .fillMaxWidth()
+                        ) {
+                            items(LFTUCServers) { server->
+                                NetworkHostCard(
+                                    server.ServerName,
+                                    server.ServerAddress,
+                                    server.ServerPort.toString()
+                                )
+                            }
                         }
                     }
                 }
             }
-            //og
+            //OG
         }
 
     }

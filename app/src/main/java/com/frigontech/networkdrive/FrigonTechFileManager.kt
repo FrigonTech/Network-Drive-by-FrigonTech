@@ -2,6 +2,7 @@
 
 package com.frigontech.networkdrive
 
+import android.os.Build
 import android.os.Environment
 import android.util.Log
 import androidx.compose.animation.core.animateFloat
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DevicesOther
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.HorizontalDivider
@@ -49,6 +51,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -72,6 +75,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 
+
 fun folderNavigator(folderPath: String): List<Pair<String, String>> {
     val currentFolder = File(folderPath) // Base folder
     val folderList = mutableListOf<Pair<String, String>>() // pair of name and abs path
@@ -83,22 +87,6 @@ fun folderNavigator(folderPath: String): List<Pair<String, String>> {
             }
         }
     }
-//    //hardcode shared folder for OEM blocked mobiles for now
-//    if(folderList.isEmpty()){
-//        FileManagerData.isOEMRestricted.value = true
-//        val currentFolder = File("/storage/emulated/0/.LFTUC-Shared") // Base folder
-//        val folderList = mutableListOf<Pair<String, String>>() // pair of name and abs path
-//        FileManagerData.currentFolder.value = "/storage/emulated/0/.LFTUC-Shared"
-//
-//        currentFolder.listFiles()?.let { files ->
-//            for (file in files) {
-//                if (file.isDirectory) {
-//                    folderList.add(file.name to file.absolutePath) // Name-Path pair
-//                }
-//            }
-//        }
-//    }
-
     return folderList
 }
 
@@ -262,7 +250,7 @@ object FileManagerData{
     val refreshExtFileManager = mutableStateOf(false)
     val currentFolder = mutableStateOf("")
     val isMultiSelectOn = mutableStateOf(false)
-//    val multiSelectFiles = mutableStateListOf<String>()
+    val multiSelectFiles = mutableStateListOf<String>()//absolute path
     var copiedFiles = mutableStateListOf<String>()
     var cutFiles = mutableStateListOf<String>()
     var batchFilesToReplace = mutableStateListOf<Pair<File, File>>() // [0] is original file ref, [1] is destination file ref
@@ -287,6 +275,14 @@ object FileManagerData{
 fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
     val context = LocalContext.current
     var hasReadPermission = remember { mutableStateOf(checkSpecificPermission(context, 8)) }
+    var hasManagePermission = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            mutableStateOf(Environment.isExternalStorageManager())
+        } else {
+            mutableStateOf(false)
+        }
+    }
+
     LaunchedEffect(hasReadPermission.value) {
         if (!hasReadPermission.value) {
             requestSpecificPermission(context, 8)
@@ -297,26 +293,19 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
     //current server name
     val currentServerName = remember{mutableStateOf("")}
     // Folder contents based on the current folder
-    val folderContents = remember(FileManagerData.currentFolder.value, FileManagerData.refreshExtFileManager.value) {
-        // Fetch folder contents only if the condition is true
-        if (FileManagerData.currentFolder.value.isNotEmpty() || FileManagerData.refreshExtFileManager.value) {
-            folderNavigator(FileManagerData.currentFolder.value) // Fetch folder names and paths
+    var folderContents by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+
+    LaunchedEffect(FileManagerData.currentFolder.value, FileManagerData.refreshExtFileManager.value) {
+        folderContents = if (FileManagerData.currentFolder.value.isNotEmpty() || FileManagerData.refreshExtFileManager.value) {
+            folderNavigator(FileManagerData.currentFolder.value)
         } else {
-            emptyList() // Return an empty list if the condition is false
+            emptyList()
         }
     }
+
     // Initial setup with the root directory
     LaunchedEffect(Unit) {
         FileManagerData.currentFolder.value = Environment.getExternalStorageDirectory().absolutePath
-//        val numberOfFiles = folderNavigator(FileManagerData.currentFolder.value).size
-//        if(numberOfFiles > 0){
-//            showToast(context, "OEM restriction due to : $numberOfFiles")
-//            FileManagerData.currentFolder.value = "/storage/emulated/0/.LFTUC-Shared"
-//            FileManagerData.isOEMRestricted.value = true
-//        }else{
-//            showToast(context, "No OEM restriction due to : $numberOfFiles")
-//            FileManagerData.isOEMRestricted.value = false
-//        }
     }
     LaunchedEffect(FileManagerData.refreshExtFileManager.value) {
         if(FileManagerData.refreshExtFileManager.value){
@@ -395,16 +384,16 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                     .size(25.dp)
                     .clickable(onClick = { showMenu.storageMenu.value = true })
             )
-//            Icon(
-//                imageVector = Icons.Rounded.MoreVert,
-//                contentDescription = "Options",
-//                tint = MaterialTheme.colorScheme.primary,
-//                modifier=Modifier
-//                    .padding(0.dp)
-//                    .size(25.dp)
-//                    .clickable(onClick = { })
-//            )
-        }) //title bar
+            Icon(
+                imageVector = Icons.Rounded.MoreVert,
+                contentDescription = "Options",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier=Modifier
+                    .padding(0.dp)
+                    .size(25.dp)
+                    .clickable(onClick = { })
+            )
+        }, onGoToHome = {FileManagerData.multiSelectFiles.clear()}) //title bar
         FrigonTechRow(modifier=Modifier
             .height(60.dp)
             .padding(0.dp)) {  //navigation bar
@@ -489,31 +478,68 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
             .clip(RoundedCornerShape(11.dp))) {
 
             if (!FileManagerData.isNavigatingServer.value) {
-                if(hasReadPermission.value){
-                    items(count = folderContents.size, key = { index->folderContents[index].second }) { index ->
-                        val currentFile = folderContents[index] // Get the Pair
-                        val file = File(currentFile.second)
-                        if(file.isDirectory){
-                            FolderCard_ListView(
-                                folderName = currentFile.first,    // Access the name
-                                folderPath = currentFile.second,   // Access the absolute path
-                                onClick = {
-                                    // Navigate to the clicked folder
-                                    FileManagerData.currentFolder.value = currentFile.second
-                                }
-                            )
-                        }else{
-                            FileCard_ListView(
-                                fileName = currentFile.first,    // Access the name
-                                filePath = currentFile.second,   // Access the absolute path
-                                onClick = {
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q){
+                    if(hasReadPermission.value)
+                    {
+                        println("has file read necessary permission")
+                        items(count = folderContents.size, key = { index->folderContents[index].second }) { index ->
+                            val currentFile = folderContents[index] // Get the Pair
+                            val file = File(currentFile.second)
+                            if(file.isDirectory){
+                                FolderCard_ListView(
+                                    folderName = currentFile.first,    // Access the name
+                                    folderPath = currentFile.second,   // Access the absolute path
+                                    onClick = {
+                                        // Navigate to the clicked folder
+                                        FileManagerData.currentFolder.value = currentFile.second
+                                    }
+                                )
+                            }else{
+                                FileCard_ListView(
+                                    fileName = currentFile.first,    // Access the name
+                                    filePath = currentFile.second,   // Access the absolute path
+                                    onClick = {
                                         // handle open file logic
-                                }
-                            )
-                        }
+                                    }
+                                )
+                            }
 
+                        }
+                    }else{
+                        println("doesnt have necessary file read permission")
+                    }
+                }else{
+                    if(hasManagePermission.value)
+                    {
+                        println("has file manage necessary permission")
+                        items(count = folderContents.size, key = { index->folderContents[index].second }) { index ->
+                            val currentFile = folderContents[index] // Get the Pair
+                            val file = File(currentFile.second)
+                            if(file.isDirectory){
+                                FolderCard_ListView(
+                                    folderName = currentFile.first,    // Access the name
+                                    folderPath = currentFile.second,   // Access the absolute path
+                                    onClick = {
+                                        // Navigate to the clicked folder
+                                        FileManagerData.currentFolder.value = currentFile.second
+                                    }
+                                )
+                            }else{
+                                FileCard_ListView(
+                                    fileName = currentFile.first,    // Access the name
+                                    filePath = currentFile.second,   // Access the absolute path
+                                    onClick = {
+                                        // handle open file logic
+                                    }
+                                )
+                            }
+
+                        }
+                    }else{
+                        println("doesnt have necessary file manage permission")
                     }
                 }
+
             }else{
                 items(items = FileManagerData.serverFolderContents, key = { it }) { file ->
                     if(!file.contains(".")){
@@ -664,6 +690,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
         isOpen = showMenu.menuVisible.value,
         onClose = { showMenu.menuVisible.value = false }
     )
+
 
     //construct-Storage menu
     @Composable

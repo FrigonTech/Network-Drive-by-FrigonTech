@@ -12,7 +12,10 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 fun startServer(context: Context, deviceName:String,){
-    startLFTUCServer(context)
+    val rootAccess = retrieveTextData(context, "rootAccess").let { text->
+        if(text.isNotEmpty()) false else (text=="true")
+    }
+    startLFTUCServer(context, rootAccess)
     startLFTUCMulticastEcho(1, deviceName, lftuc_getLinkLocalIPv6Address(), specifiedPort, 1)
 }
 

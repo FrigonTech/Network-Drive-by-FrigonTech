@@ -7,37 +7,42 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.Settings
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.activity.result.contract.ActivityResultContracts
 
 //Permissions along with Request Code; !?! Don't change the sequence its hardcoded
 val permissions:List<String> = mutableListOf("android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_STATE",
     "android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_FINE_LOCATION",
     "android.permission.ACCESS_COARSE_LOCATION", "android.permission.CHANGE_WIFI_MULTICAST_STATE", "android.permission.NEARBY_WIFI_DEVICES",
-    "android.permission.READ_EXTERNAL_STORAGE", "android.permission.MANAGE_EXTERNAL_STORAGE")
+    "android.permission.READ_EXTERNAL_STORAGE", "android.permission.MANAGE_EXTERNAL_STORAGE", "")
 
-//0 - access wifi state
-//1 - change wifi state
-//2 - internet
-//3 - access network state
-//4 - access fine location
-//5 - access coarse location
-//6 - change wifi multicast state
-//7 - nearby wifi devices
-//8 - read external storage
-//9 - manage external storage
+///0 - access wifi state
+///1 - change wifi state
+///2 - internet
+///3 - access network state
+///4 - access fine location
+///5 - access coarse location
+///6 - change wifi multicast state
+///7 - nearby wifi devices
+///8 - read external storage
+///9 - manage external storage
+//10 - reserved for SAF persistent permission
 
 //check for all permissions; used in 'requestPermissions'
 fun checkPermissions(context: Context): MutableList<Int> {
     val requestPermissionIndex = mutableListOf<Int>()
     for (i in permissions.indices){
-        if(ContextCompat.checkSelfPermission(context, permissions[i]) == PackageManager.PERMISSION_GRANTED){
-            continue
-        }else{
-            requestPermissionIndex.add(i)
+        if(i!=10){
+            if(ContextCompat.checkSelfPermission(context, permissions[i]) == PackageManager.PERMISSION_GRANTED){
+                continue
+            }else{
+                requestPermissionIndex.add(i)
+            }
         }
     }
 
@@ -47,10 +52,12 @@ fun checkPermissions(context: Context): MutableList<Int> {
 fun areAllPermissionsGranted(context: Context): Boolean{
     var foundAnyUngranted = mutableStateOf(false)
     for (i in permissions.indices){
-        if(ContextCompat.checkSelfPermission(context, permissions[i]) == PackageManager.PERMISSION_GRANTED){
-            foundAnyUngranted.value = false
-        }else{
-            foundAnyUngranted.value = true
+        if(i != 10){ // list all the reserved or null/empty request indices here
+            if(ContextCompat.checkSelfPermission(context, permissions[i]) == PackageManager.PERMISSION_GRANTED){
+                foundAnyUngranted.value = false
+            }else{
+                foundAnyUngranted.value = true
+            }
         }
     }
     return foundAnyUngranted.value

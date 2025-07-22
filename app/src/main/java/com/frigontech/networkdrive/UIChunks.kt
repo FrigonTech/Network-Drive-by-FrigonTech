@@ -43,11 +43,14 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.rounded.Adb
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ContentPaste
@@ -88,9 +91,12 @@ import androidx.compose.ui.node.Ref
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Dialog
+import com.frigontech.networkdrive.ui.theme.ColorManager
+import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -114,6 +120,7 @@ object showMenu{
     var createFolderDialogue = mutableStateOf(false)
     val downloadFileDialogue = mutableStateOf(false)
     val findPathMenu = mutableStateOf(false)
+    val moreVerticalMenu = mutableStateOf(false)
 }
 
 //controlling instead of setting all variables individually
@@ -175,6 +182,7 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
                     showToast(context, "This operation is invalid in multi-select mode")
                 }
             }))
+
             contextActionsList.add(ContextAction(Icons.Rounded.FolderCopy, "Copy Folder", {
                 //remove all previous copied files for reserving space for just this folder
                 if(!showMenu.folderPath.value!!.isEmpty()){
@@ -197,6 +205,15 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
             }))
             contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {
                 pasteFileObject()
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.FolderOpen, (if(!FileManagerData.isMultiSelectOn.value)"Multi-Select" else "Cancel Multi-Select"), {
+                //turn on multi select system that stores absolute paths of the folders to a variable
+                if(FileManagerData.isMultiSelectOn.value){
+                    FileManagerData.isMultiSelectOn.value = false
+                    FileManagerData.multiSelectFiles.clear()
+                }else{
+                    FileManagerData.isMultiSelectOn.value = true
+                }
             }))
             contextActionsList.add(ContextAction(Icons.Rounded.WifiTethering, "Map To Network",
                 {//perform a check for if the id and password is configured!
@@ -256,32 +273,32 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
                 }
             }))
         }
-//        showMenu.caller.value.contains("File-Cards")-> {//Files
-//            contextActionsList.clear()
-//            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy Files", {
-//                if(!FileManagerData.multiSelectFiles.isEmpty()) {
-//                    FileManagerData.batchFilesToReplace.clear()
-//                    FileManagerData.cutFiles.clear()
-//                    FileManagerData.copiedFiles.clear()
-//                    FileManagerData.copiedFiles.addAll(FileManagerData.multiSelectFiles)
-//                    showToast(context, "multiple files copied")
-//                }
-//            }))
-//            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Files", {
-//                if(!FileManagerData.multiSelectFiles.isEmpty()) {
-//                    FileManagerData.batchFilesToReplace.clear()
-//                    FileManagerData.copiedFiles.clear()
-//                    FileManagerData.cutFiles.clear()
-//                    FileManagerData.cutFiles.addAll(FileManagerData.multiSelectFiles)
-//                    showToast(context, "multiple files cut")
-//                }
-//            }))
-//        }
+        showMenu.caller.value.contains("MultiSelectedFiles")-> {//Files
+            contextActionsList.clear()
+            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy Files", {
+                if(!FileManagerData.multiSelectFiles.isEmpty()) {
+                    FileManagerData.batchFilesToReplace.clear()
+                    FileManagerData.cutFiles.clear()
+                    FileManagerData.copiedFiles.clear()
+                    FileManagerData.copiedFiles.addAll(FileManagerData.multiSelectFiles)
+                    showToast(context, "multiple files copied")
+                }
+            }))
+            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Files", {
+                if(!FileManagerData.multiSelectFiles.isEmpty()) {
+                    FileManagerData.batchFilesToReplace.clear()
+                    FileManagerData.copiedFiles.clear()
+                    FileManagerData.cutFiles.clear()
+                    FileManagerData.cutFiles.addAll(FileManagerData.multiSelectFiles)
+                    showToast(context, "multiple files cut")
+                }
+            }))
+        }
         showMenu.caller.value.contains("NetworkFile")-> {//Files
             contextActionsList.clear()
             contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Download File", {
                 downloadFileFromServer(serverAddress = FileManagerData.currentServerAddress.value,
-                    path = FileManagerData.currentServerFolder.value +"/"+ FileManagerData.lftuc_FileToRequest.value,
+                    path = FileManagerData.currentServerFolder.value +"/"+ FileManagerData.lftuc_FileToRequest.value+"[req]",
 
                     onProgress = {progress->
                         FileManagerData.lftuc_DownloadProgress.value = progress.toFloat()/100f
@@ -720,6 +737,7 @@ fun NetworkHostCard(deviceName: String, deviceIPAddress: String, port: String) {
 
 @Composable
 fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> Unit, isNetworkFolder: Boolean = false) {
+    val isMultiSelected = mutableStateOf(false)
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -745,7 +763,12 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
                         },
                         onTap = {
                             showMenu.menuVisible.value = false
-                            println("Tap detected on $folderPath")
+                            if (FileManagerData.isMultiSelectOn.value) {
+                                isMultiSelected.value = !isMultiSelected.value
+                                FileManagerData.multiSelectFiles.add(folderPath)
+                            } else {
+                                isMultiSelected.value = false
+                            }
                             onClick()
                         }
                     )
@@ -864,11 +887,12 @@ fun fileIcon(extension:String): Int{
 
         else->R.drawable.extension_unknown//default fallback
     }
-}
+}// Custom file icons that are natively recognised
 
 @Composable //see folders listed in the page in 'list view'
 fun FileCard_ListView(fileName:String, filePath:String, onClick: () -> Unit, isNetworkFile: Boolean = false){
     val extension:String= fileName.split('.').last()
+    val isMultiSelected = mutableStateOf(false)
     Box(modifier=Modifier.fillMaxWidth()){
         Card(modifier= Modifier
             .fillMaxWidth()
@@ -881,59 +905,97 @@ fun FileCard_ListView(fileName:String, filePath:String, onClick: () -> Unit, isN
 
                         showMenu.menuVisible.value = true
                         showMenu.caller.value =
-                            "${fileName}-${if (isNetworkFile) "NetworkFile" else "FileCard"}"
-                        println("Long press detected on ${showMenu.caller.value}")
-                        showMenu.filePath.value = filePath
-                        if (isNetworkFile) {
-                            FileManagerData.lftuc_FileToRequest.value = "[FILE]${fileName}"
-                        } else {
-                            FileManagerData.lftuc_FileToRequest.value = ""
+                            "${fileName}-${
+                                if (!FileManagerData.isMultiSelectOn.value) {
+                                    (if (isNetworkFile) "NetworkFile" else "FileCard")
+                                } else {
+                                    if(filePath.contains("/storage/emulated/0") && !FileManagerData.multiSelectFiles.any().let { it.toString().contains("/storage/emulated/0") }){
+                                        FileManagerData.multiSelectFiles.clear()
+                                        "MultiSelectedFiles"
+                                    }else if(!filePath.contains("/storage/emulated/0") && FileManagerData.multiSelectFiles.any().let { it.toString().contains("/storage/emulated/0") }){
+                                        FileManagerData.multiSelectFiles.clear()
+                                        "MultiSelectedFiles"                                        
+                                    }else{
+                                        "MultiSelectedFiles" 
+                                    }
+                                }}"
+                                println("Long press detected on ${showMenu.caller.value}")
+                                showMenu.filePath.value = filePath
+                                if (isNetworkFile) {
+                                    FileManagerData.lftuc_FileToRequest.value = "[FILE]${fileName}"
+                                } else {
+                                    FileManagerData.lftuc_FileToRequest.value = ""
+                                }
+                            },
+                        onTap = {
+                            showMenu.menuVisible.value = false;
+                            if (FileManagerData.isMultiSelectOn.value) {
+                                isMultiSelected.value = !isMultiSelected.value
+                                FileManagerData.multiSelectFiles.add(filePath)
+                            } else {
+                                isMultiSelected.value = false
+                            }
+                            onClick()
                         }
+                        )
                     },
-                    onTap = {
-                        showMenu.menuVisible.value = false;
-                        onClick()
-                    }
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary) // matching the color pallete
                 )
-            },
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary) // matching the color pallete
-        )
-        {
-            Row(
-                modifier = Modifier
-                    .fillMaxHeight()
-            ) {
-                // Left Column; File Icon
-                Box(
-                    modifier = Modifier
-                        .width(60.dp)
-                        .fillMaxHeight()
-                        .padding(start = 5.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id= fileIcon(extension)),
-                        contentDescription = null,
-                        modifier=Modifier
-                            .size(70.dp)
-                            .padding(end = 7.dp)
-                    )
-                }
+                {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                    ) {
+                        // Left Column; File Icon
+                        Box(
+                            modifier = Modifier
+                                .width(60.dp)
+                                .fillMaxHeight()
+                                .padding(start = 5.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = fileIcon(extension)),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(70.dp)
+                                    .padding(end = 7.dp)
+                            )
+                        }
 
-                //Right Column; File Name
-                Row(modifier = Modifier
-                    .fillMaxSize()
-                    .padding(start = 5.dp, end = 5.dp, top = 0.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text=fileName,
-                        fontFamily = bahnschriftFamily,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                        if (isMultiSelected.value) {
+                            Box(
+                                modifier = Modifier
+                                    .size(23.dp)
+                                    .clip(CircleShape)
+                                    .background(ColorManager(frigontech0green))
+                                    .border(3.dp, ColorManager(frigontech0green), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Checked",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(23.dp / 1.5f)
+                                )
+                            }
+                        }
+
+                        //Right Column; File Name
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 5.dp, end = 5.dp, top = 0.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = fileName,
+                                fontFamily = bahnschriftFamily,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
-        }
-    }
 }

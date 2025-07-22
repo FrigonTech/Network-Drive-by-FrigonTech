@@ -68,6 +68,7 @@ android {
             excludes.add("META-INF/*.kotlin_module")
             excludes.add("org/bouncycastle/x509/CertPathReviewerMessages_de.properties")
             excludes.add("org/bouncycastle/x509/CertPathReviewerMessages.properties")
+            excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
         }
     }
 }
@@ -111,14 +112,9 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation:2.3.6")// COntent Negotiator
 
     implementation("org.bouncycastle:bcprov-jdk18on:1.79")
-
-
     implementation("io.ktor:ktor-client-core:2.3.6")
     implementation("io.ktor:ktor-client-android:2.3.6") // Android-specific HTTP client
-    //SMBJ dependency
-    implementation("com.hierynomus:smbj:0.14.0")
-    //JCIFS
-    implementation("eu.agno3.jcifs:jcifs-ng:2.1.9")
+
     //LFTUC-1 module by FrigonTech from jitpack.io
-    implementation("com.github.FrigonTech:LFTUC-1:v1.3.6")
+    implementation("com.github.FrigonTech:LFTUC-1:v1.4.2")
 }

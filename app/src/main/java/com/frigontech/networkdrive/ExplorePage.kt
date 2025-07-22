@@ -67,6 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -318,7 +319,11 @@ fun ExplorePage(navSystem: NavController) {
                 SidebarMenuItem(icon = Icons.Rounded.Settings, title = "Settings") {
                     navSystem.navigate("settings")
                 }
-                SidebarMenuItem(icon = Icons.Rounded.Star, title = "Rate The App") {}
+                val uriHandler = LocalUriHandler.current
+                SidebarMenuItem(icon = Icons.Rounded.Star, title = "Rate The App / Feedback") {
+                    //Rate the app in google form
+                    uriHandler.openUri("https://forms.gle/hZem5edZRuvMyPiL8")
+                }
                 SidebarMenuItem(icon = Icons.Rounded.Terminal, title = "Logs") {
                     navSystem.navigate("network-interface")
                 }
