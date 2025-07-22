@@ -183,38 +183,38 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
                 }
             }))
 
-            contextActionsList.add(ContextAction(Icons.Rounded.FolderCopy, "Copy Folder", {
-                //remove all previous copied files for reserving space for just this folder
-                if(!showMenu.folderPath.value!!.isEmpty()){
-                    FileManagerData.batchFilesToReplace.clear()
-                    FileManagerData.cutFiles.clear()
-                    FileManagerData.copiedFiles.clear()
-                    FileManagerData.copiedFiles.addAll(listOf((showMenu.folderPath.value)?:""))
-                    showToast(context, "folder copied")
-                }
-            }))
-            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Folder", {
-                //remove all previous cut files to reserve space in memory for this file
-                if(!showMenu.folderPath.value!!.isEmpty()) {
-                    FileManagerData.batchFilesToReplace.clear()
-                    FileManagerData.copiedFiles.clear()
-                    FileManagerData.cutFiles.clear()
-                    FileManagerData.cutFiles.addAll(listOf((showMenu.folderPath.value) ?: ""))
-                    showToast(context, "folder cut into memory")
-                }
-            }))
-            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {
-                pasteFileObject()
-            }))
-            contextActionsList.add(ContextAction(Icons.Rounded.FolderOpen, (if(!FileManagerData.isMultiSelectOn.value)"Multi-Select" else "Cancel Multi-Select"), {
-                //turn on multi select system that stores absolute paths of the folders to a variable
-                if(FileManagerData.isMultiSelectOn.value){
-                    FileManagerData.isMultiSelectOn.value = false
-                    FileManagerData.multiSelectFiles.clear()
-                }else{
-                    FileManagerData.isMultiSelectOn.value = true
-                }
-            }))
+//            contextActionsList.add(ContextAction(Icons.Rounded.FolderCopy, "Copy Folder", {
+//                //remove all previous copied files for reserving space for just this folder
+//                if(!showMenu.folderPath.value!!.isEmpty()){
+//                    FileManagerData.batchFilesToReplace.clear()
+//                    FileManagerData.cutFiles.clear()
+//                    FileManagerData.copiedFiles.clear()
+//                    FileManagerData.copiedFiles.addAll(listOf((showMenu.folderPath.value)?:""))
+//                    showToast(context, "folder copied")
+//                }
+//            }))
+//            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut Folder", {
+//                //remove all previous cut files to reserve space in memory for this file
+//                if(!showMenu.folderPath.value!!.isEmpty()) {
+//                    FileManagerData.batchFilesToReplace.clear()
+//                    FileManagerData.copiedFiles.clear()
+//                    FileManagerData.cutFiles.clear()
+//                    FileManagerData.cutFiles.addAll(listOf((showMenu.folderPath.value) ?: ""))
+//                    showToast(context, "folder cut into memory")
+//                }
+//            }))
+//            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {
+//                pasteFileObject()
+//            }))
+//            contextActionsList.add(ContextAction(Icons.Rounded.FolderOpen, (if(!FileManagerData.isMultiSelectOn.value)"Multi-Select" else "Cancel Multi-Select"), {
+//                //turn on multi select system that stores absolute paths of the folders to a variable
+//                if(FileManagerData.isMultiSelectOn.value){
+//                    FileManagerData.isMultiSelectOn.value = false
+//                    FileManagerData.multiSelectFiles.clear()
+//                }else{
+//                    FileManagerData.isMultiSelectOn.value = true
+//                }
+//            }))
             contextActionsList.add(ContextAction(Icons.Rounded.WifiTethering, "Map To Network",
                 {//perform a check for if the id and password is configured!
                     val resolvedPath = showMenu.folderPath.value?:"invalid"
@@ -235,27 +235,27 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
         showMenu.caller.value.contains("FileCard")-> {//Files
             contextActionsList.clear()
             contextActionsList.add(ContextAction(Icons.Rounded.FileOpen, "Open File", {}))
-            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy File", {
-                if(!showMenu.filePath.value!!.isEmpty()) {
-                    FileManagerData.batchFilesToReplace.clear()
-                    FileManagerData.cutFiles.clear()
-                    FileManagerData.copiedFiles.clear()
-                    FileManagerData.copiedFiles.addAll(listOf((showMenu.filePath.value) ?: ""))
-                    showToast(context, "file copied")
-                }
-            }))
-            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut File", {
-                if(!showMenu.filePath.value!!.isEmpty()) {
-                    FileManagerData.batchFilesToReplace.clear()
-                    FileManagerData.copiedFiles.clear()
-                    FileManagerData.cutFiles.clear()
-                    FileManagerData.cutFiles.addAll(listOf((showMenu.filePath.value) ?: ""))
-                    showToast(context, "file cut into memory")
-                }
-            }))
-            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {
-                pasteFileObject()
-            }))
+//            contextActionsList.add(ContextAction(Icons.Rounded.FileCopy, "Copy File", {
+//                if(!showMenu.filePath.value!!.isEmpty()) {
+//                    FileManagerData.batchFilesToReplace.clear()
+//                    FileManagerData.cutFiles.clear()
+//                    FileManagerData.copiedFiles.clear()
+//                    FileManagerData.copiedFiles.addAll(listOf((showMenu.filePath.value) ?: ""))
+//                    showToast(context, "file copied")
+//                }
+//            }))
+//            contextActionsList.add(ContextAction(Icons.Rounded.ContentCut, "Cut File", {
+//                if(!showMenu.filePath.value!!.isEmpty()) {
+//                    FileManagerData.batchFilesToReplace.clear()
+//                    FileManagerData.copiedFiles.clear()
+//                    FileManagerData.cutFiles.clear()
+//                    FileManagerData.cutFiles.addAll(listOf((showMenu.filePath.value) ?: ""))
+//                    showToast(context, "file cut into memory")
+//                }
+//            }))
+//            contextActionsList.add(ContextAction(Icons.Rounded.ContentPaste, "Paste Here", {
+//                pasteFileObject()
+//            }))
             contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Create Folder Here", {
                 showMenu.createFolderDialogue.value = true
                 showToast(context, "folder created")

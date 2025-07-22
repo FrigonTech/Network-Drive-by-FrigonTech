@@ -82,11 +82,17 @@ fun folderNavigator(folderPath: String): List<Pair<String, String>> {
 
     currentFolder.listFiles()?.let { files ->
         for (file in files) {
-            if (file.isDirectory) {
-                folderList.add(file.name to file.absolutePath) // Name-Path pair
-            }
+            folderList.add(file.name to file.absolutePath) // Name-Path pair
         }
     }
+
+//    currentFolder.listFiles()?.let { files ->
+//        for (file in files) {
+//            if (file.isDirectory) {
+//                folderList.add(file.name to file.absolutePath) // Name-Path pair
+//            }else if (file.is)
+//        }
+//    }
     return folderList
 }
 
@@ -197,6 +203,7 @@ fun pasteFileObject(overwriteAll: Boolean=false) { //is overwrite all is false t
                         break
                     }else{
                         if(currentFile.copyTo(destinationFile).exists()){
+                            currentFile.copyTo(destinationFile).exists()
                             println("file copy success")
                         }else{
                             println("file copy failure")
