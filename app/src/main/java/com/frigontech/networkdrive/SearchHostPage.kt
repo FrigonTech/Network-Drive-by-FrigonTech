@@ -125,6 +125,7 @@ fun SearchHostPage (navSystem: NavController, focusManager: FocusManager){
     val LFTUCServers = remember{mutableStateListOf<LFTUCServers>()}
     val reloadhosts = remember{mutableStateOf(false)};
     LaunchedEffect(Unit) {
+
         while (true) {
             if(isScanRunning.value){
                 // Get new servers from the module

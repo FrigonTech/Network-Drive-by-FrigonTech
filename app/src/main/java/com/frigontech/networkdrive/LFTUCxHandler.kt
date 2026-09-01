@@ -8,20 +8,32 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 fun startServer(context: Context, deviceName:String,){
-    val rootAccess = retrieveTextData(context, "rootAccess").let { text->
-        if(text.isNotEmpty()) false else (text=="true")
-    }
-    startLFTUCServer(context, rootAccess)
+    startLFTUCServer(context, false, specifiedPort)
     startLFTUCMulticastEcho(1, deviceName, lftuc_getLinkLocalIPv6Address(), specifiedPort, 1)
 }
 
-fun stopServer(){
-    stopLFTUCServer()
-    stopLFTUCMulticastEcho()
+fun stopServer() {
+    CoroutineScope(Dispatchers.IO).launch {
+        println("DEBUG: Stopping server")
+        try {
+            stopLFTUCMulticastEcho()
+            stopLFTUCServer()
+            withContext(Dispatchers.Main) {
+                lftuc_receivedMessages.add("Server and multicast stopped from Kotlin.")
+                println("DEBUG: Server and multicast stopped successfully")
+            }
+        } catch (e: Exception) {
+            println("DEBUG: Error stopping server: ${e.message}")
+            withContext(Dispatchers.Main) {
+                lftuc_receivedMessages.add("Error stopping server: ${e.message}")
+            }
+        }
+    }
 }
 
 fun startScanningForServers(context:Context, multicastGroup:String="239.255.255.250", port:Int=8080){

@@ -443,7 +443,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                     var truncatedPath = ""
 
                     if (FileManagerData.isNavigatingServer.value) {
-                        val serverInitials = "lftuc://${currentServerName.value}/"
+                        val serverInitials = "lftuc:/${currentServerName.value}/"
                         val fullURI = serverInitials + FileManagerData.currentServerFolder.value
                         // When navigating on a server, create the folder path with possible truncation
                         displayServerFolderName =
@@ -767,8 +767,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                         SidebarMenuItem(Icons.Rounded.DevicesOther, device.first,({
                             if(device.first != "My Device"){
                                 showToast(context, "Requesting server DIR...")
-
-                                requestFilesInServerDirectory(device.second, FileManagerData.currentServerFolder.value,
+                                requestFilesInServerDirectory(device.second, "[DIR]" + FileManagerData.currentServerFolder.value,
                                     onSuccess = { files ->
                                         scope.launch {
                                             FileManagerData.serverFolderContents.clear()
@@ -1175,7 +1174,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                 modifier = Modifier
                     .clip(RoundedCornerShape(25.dp))
                     .width((animatedProgress * 330).dp)
-                    .height((animatedProgress * 380).dp) // Animate the height
+                    .height((animatedProgress * 420).dp) // Animate the height
                     //.align(Alignment.BottomCenter) // Anchor to bottom of the screen
                     .background(MaterialTheme.colorScheme.background)
                     .padding(5.dp)
@@ -1236,7 +1235,7 @@ fun FileManagerPage(navSystem: NavController, focusManager: FocusManager){
                 FrigonTechRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp)
+                        .height(200.dp)
                         .padding(5.dp)
                         .clip(RoundedCornerShape(25.dp))
                         .background(

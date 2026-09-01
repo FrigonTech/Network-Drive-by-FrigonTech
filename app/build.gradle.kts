@@ -116,5 +116,5 @@ dependencies {
     implementation("io.ktor:ktor-client-android:2.3.6") // Android-specific HTTP client
 
     //LFTUC-1 module by FrigonTech from jitpack.io
-    implementation("com.github.FrigonTech:LFTUC-1:v1.4.2")
+    implementation("com.github.FrigonTech:LFTUC-1:v1.6.6")
 }

@@ -220,7 +220,7 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
                     val resolvedPath = showMenu.folderPath.value?:"invalid"
                     if(resolvedPath.isNotEmpty()){
                         mapFileObjectToLFTUCServer(
-                            fileObjectList = listOf()
+                            fileObjectList = listOf(resolvedPath)
                         )
                         showToast(context, "folder mapped to server")
                     }else{
@@ -263,11 +263,10 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
             contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Map To Network", {
                 //perform a check for if the id and password is configured!
                 val resolvedPath = showMenu.filePath.value?:"invalid"
-                if(resolvedPath.isNotEmpty()){
+                if(resolvedPath.isNotEmpty() && !resolvedPath.equals("invalid")){
                     mapFileObjectToLFTUCServer(
-                        fileObjectList = listOf()
+                        fileObjectList = listOf(resolvedPath)
                     )
-                    showToast(context, "file mapped to server")
                 }else{
                     showToast(context, "file not mapped to server")
                 }
@@ -297,8 +296,9 @@ fun GetContextActions(context: Context):List<ContextAction>{//setup actions base
         showMenu.caller.value.contains("NetworkFile")-> {//Files
             contextActionsList.clear()
             contextActionsList.add(ContextAction(Icons.Rounded.CreateNewFolder, "Download File", {
+                println("Downloading this file: ${FileManagerData.lftuc_FileToRequest.value} ")
                 downloadFileFromServer(serverAddress = FileManagerData.currentServerAddress.value,
-                    path = FileManagerData.currentServerFolder.value +"/"+ FileManagerData.lftuc_FileToRequest.value+"[req]",
+                    path = FileManagerData.currentServerFolder.value +/*"/"+ */FileManagerData.lftuc_FileToRequest.value+"[req]",
 
                     onProgress = {progress->
                         FileManagerData.lftuc_DownloadProgress.value = progress.toFloat()/100f
@@ -802,7 +802,7 @@ fun FolderCard_ListView(folderName: String, folderPath: String, onClick: () -> U
                     .padding(start = 5.dp, end = 5.dp, top = 21.dp)
                 ) {
                     Text(
-                        text = folderName,
+                        text = folderName.replaceFirst("[DIR]", ""),
                         fontSize = 14.sp,
                         fontFamily = bahnschriftFamily,
                         color = MaterialTheme.colorScheme.primary,
@@ -922,7 +922,7 @@ fun FileCard_ListView(fileName:String, filePath:String, onClick: () -> Unit, isN
                                 println("Long press detected on ${showMenu.caller.value}")
                                 showMenu.filePath.value = filePath
                                 if (isNetworkFile) {
-                                    FileManagerData.lftuc_FileToRequest.value = "[FILE]${fileName}"
+                                    FileManagerData.lftuc_FileToRequest.value = fileName
                                 } else {
                                     FileManagerData.lftuc_FileToRequest.value = ""
                                 }
@@ -989,7 +989,7 @@ fun FileCard_ListView(fileName:String, filePath:String, onClick: () -> Unit, isN
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = fileName,
+                                text = fileName.replaceFirst("[FILE]", ""), //remove [FILE] tag
                                 fontFamily = bahnschriftFamily,
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.primary

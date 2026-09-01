@@ -14,28 +14,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.frigontech.lftuc_1.lftuc_main_lib
-import com.frigontech.lftuc_1.lftuc_main_lib.*
+import com.frigontech.lftuc_1.lftuc_main_lib.lftuc_getLinkLocalIPv6Address
+import com.frigontech.lftuc_1.lftuc_main_lib.lftuc_getLocalIpv4Address
+import com.frigontech.lftuc_1.lftuc_main_lib.lftuc_getReceivedMessages
+//import com.frigontech.lftuc_1.lftuc_main_lib.printDebug
 import com.frigontech.networkdrive.ui.theme.ColorManager
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0green
 import com.frigontech.networkdrive.ui.theme.Colors.frigontech0terminal
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 var localIPv4AD: String = lftuc_getLocalIpv4Address()
 
@@ -50,6 +44,7 @@ fun NetworkInterfacePage(navSystem: NavController, focusManager: FocusManager) {
         messages.add("⚠️link-local ipv6 address - ${lftuc_getLinkLocalIPv6Address()}")
 
         while (true) {
+            println("firing network interface loop")
             // Get new messages from the module
             val newMessages = lftuc_getReceivedMessages()
 
@@ -60,12 +55,14 @@ fun NetworkInterfacePage(navSystem: NavController, focusManager: FocusManager) {
                 messages.addAll(updatedMessages)
             }
 
-            delay(500) // Poll every 500ms
+            delay(1000) // Poll every 500ms
         }
     }
 
     //Making a Terminal like Vertical Text containing structure
-    Column(modifier = Modifier.fillMaxSize().pointerInput(Unit){detectTapGestures {focusManager.clearFocus()}}) {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } }) {
         TitleBar(title = "Logs", navSystem = navSystem, {})
         //Code Style Body
         // Terminal-like black box (fills remaining space)
@@ -78,7 +75,10 @@ fun NetworkInterfacePage(navSystem: NavController, focusManager: FocusManager) {
             Box(
                 modifier = Modifier
                     .fillMaxSize() // Fill the parent Box
-                    .background(color = ColorManager(frigontech0terminal).copy(alpha = 0.5f), shape = RoundedCornerShape(5.dp))
+                    .background(
+                        color = ColorManager(frigontech0terminal).copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(5.dp)
+                    )
             ) {
                 // Terminal content can go here
                 // For example, showing the IP address
