@@ -17,7 +17,7 @@ Tutorial video coming soon!
 - **Free Updates**: Get the latest features and improvements with every update.
 
 ## Download Now:
-*Download Network Drive Explorer v1.0.0 (Latest)*  
+*Download Network Drive Explorer v3.0 (Latest)*  
 
 [![Download Network Drive Explorer v1.0.0 (Latest)](https://img.shields.io/badge/Download-Latest%20APK-orange?style=plastic&logo=android&logoColor=white&labelColor=blue&color=orange)](https://github.com/FrigonTech/Network-Drive-by-FrigonTech/releases/download/v3.0/Network-Drive.apk)
 
