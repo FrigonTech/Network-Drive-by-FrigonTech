@@ -1,4 +1,4 @@
-# Network Drive Explorer
+# Network Drive Explorer (Android)
 
 **Network Drive Explorer** is a powerful and user-friendly Android app designed to help you manage and explore network drives effortlessly. With an intuitive interface and seamless integration, you can access files across local and remote drives with just a few taps.
 
