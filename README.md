@@ -19,7 +19,7 @@ Tutorial video coming soon!
 ## Download Now:
 *Download Network Drive Explorer v1.0.0 (Latest)*  
 
-[![Download Network Drive Explorer v1.0.0 (Latest)](https://img.shields.io/badge/Download-Latest%20APK-orange?style=plastic&logo=android&logoColor=white&labelColor=blue&color=orange)](https://github.com/FrigonTech/Network-Drive-by-FrigonTech/releases/download/v1.0.0/Network.Drive.Explorer.-.official.dev.build.apk)
+[![Download Network Drive Explorer v1.0.0 (Latest)](https://img.shields.io/badge/Download-Latest%20APK-orange?style=plastic&logo=android&logoColor=white&labelColor=blue&color=orange)]([https://github.com/FrigonTech/Network-Drive-by-FrigonTech/releases/download/v1.0.0/Network.Drive.Explorer.-.official.dev.build.apk](https://github.com/FrigonTech/Network-Drive-by-FrigonTech/releases/download/v3.0/Network-Drive.apk))
 
 ## How To Use:
 We'll call the device to take the data from as the 'source device'. And the device you want to receive the data in as the 'receiving device'.
@@ -47,7 +47,3 @@ We'll call the device to take the data from as the 'source device'. And the devi
 
 ### ➕Preferred Apps (Optional):
 - Best advised to use 'Zarchiver' or any other file manager if you're comfortable.
-
-### ⚠️"Device Storage" not showing files/folders in my device:
-- This issue occurs in some OEM devices (eg. IQOO Z9x5), still works on most of the devices like Vivo, Motorola, etc.
-- More Devices will be tested soon. If it works on your device, you could send the make and model or just OEM's name in the "Rate The App/ Feedback" for helping in the process.
