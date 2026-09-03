@@ -19,7 +19,7 @@ Tutorial video coming soon!
 ## Download Now:
 *Download Network Drive Explorer v1.0.0 (Latest)*  
 
-[![Download Network Drive Explorer v1.0.0 (Latest)](https://img.shields.io/badge/Download-Latest%20APK-orange?style=plastic&logo=android&logoColor=white&labelColor=blue&color=orange)]([https://github.com/FrigonTech/Network-Drive-by-FrigonTech/releases/download/v3.0/Network-Drive.apk])
+[![Download Network Drive Explorer v1.0.0 (Latest)](https://img.shields.io/badge/Download-Latest%20APK-orange?style=plastic&logo=android&logoColor=white&labelColor=blue&color=orange)](https://github.com/FrigonTech/Network-Drive-by-FrigonTech/releases/download/v3.0/Network-Drive.apk)
 
 ## How To Use:
 We'll call the device to take the data from as the 'source device'. And the device you want to receive the data in as the 'receiving device'.
